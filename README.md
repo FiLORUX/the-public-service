@@ -430,7 +430,7 @@ clasp push
 
 ## 📞 **Support**
 
-**GitHub Issues:** https://github.com/davidthast/gudstjanst-system/issues  
+**GitHub Issues:** https://github.com/FiLORUX/svt-gudstjanst/issues  
 **Email:** david@thast.se  
 
 **Vanliga frågor:** Se [FAQ.md](FAQ.md) (skapas senare)
