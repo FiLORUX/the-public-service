@@ -413,8 +413,8 @@ Vill du förbättra systemet? Skicka pull requests!
 
 ### Dev Setup
 ```bash
-git clone https://github.com/davidthast/gudstjanst-system
-cd gudstjanst-system
+git clone https://github.com/FiLORUX/svt-gudstjanst
+cd svt-gudstjanst
 # Edit .gs files locally
 # Deploy via clasp (Google Apps Script CLI)
 clasp push
