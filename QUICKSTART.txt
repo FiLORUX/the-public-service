@@ -1,0 +1,118 @@
+═══════════════════════════════════════════════════════════════════
+  🎬 GUDSTJÄNST PRODUCTION SYSTEM - QUICK START
+═══════════════════════════════════════════════════════════════════
+
+📦 FILER DU HAR FÅTT:
+
+Apps Script (kopiera till Google Sheets Script Editor):
+  ✓ Config.gs          - Konfiguration & konstanter
+  ✓ Database.gs        - Databashantering
+  ✓ Views.gs           - Vy-generering  
+  ✓ UI.gs              - Menyer & dialoger
+  ✓ Triggers.gs        - Event handlers & API
+
+Dokumentation:
+  ✓ README.md          - Full dokumentation
+  ✓ DEPLOYMENT.md      - Deployment guide (läs denna först!)
+  ✓ SUMMARY.md         - Systemöversikt för dig
+  ✓ LICENSE            - MIT-licens
+
+Support:
+  ✓ .gitignore         - För Git-repo
+
+═══════════════════════════════════════════════════════════════════
+  🚀 DEPLOYMENT (10 MINUTER)
+═══════════════════════════════════════════════════════════════════
+
+STEG 1: Skapa Google Sheet
+  1. Gå till https://sheets.google.com
+  2. Skapa nytt kalkylblad
+  3. Döp till "Gudstjänst Produktion - MARIAKYRKAN 2025"
+
+STEG 2: Öppna Apps Script Editor
+  1. Extensions > Apps Script
+  2. Ta bort default Code.gs
+
+STEG 3: Kopiera in kod-filer
+  1. Skapa 5 nya script-filer (.gs)
+  2. Kopiera in innehållet från:
+     - Config.gs
+     - Database.gs
+     - Views.gs
+     - UI.gs
+     - Triggers.gs
+  3. Spara (Ctrl+S)
+
+STEG 4: Bootstrap
+  1. Stäng Script Editor, gå tillbaka till Sheet
+  2. Ladda om (F5)
+  3. System > Bootstrap Database
+  4. Bekräfta
+  5. Vänta 10-20 sekunder
+
+STEG 5: Generera vyer
+  1. System > Generate All Views
+  2. Vänta 5-10 sekunder
+
+✅ KLART! Du har nu:
+  • 6 dolda database sheets (_DB_*)
+  • 4 program-vyer (Program 1-4)
+  • 1 inspelningsschema
+  • 1 översikt-dashboard
+  • 1 kreditlista
+
+═══════════════════════════════════════════════════════════════════
+  📖 LÄS VIDARE
+═══════════════════════════════════════════════════════════════════
+
+DEPLOYMENT.md    - Steg-för-steg installation med screenshots
+SUMMARY.md       - Systemöversikt, arkitektur, jämförelser
+README.md        - Full användarguide och dokumentation
+
+═══════════════════════════════════════════════════════════════════
+  🎯 NÄSTA STEG
+═══════════════════════════════════════════════════════════════════
+
+1. Konfigurera program-metadata:
+   Inställningar > Redigera program­metadata
+
+2. Lägg till personer:
+   Personer > Lägg till person
+
+3. Skapa första posten:
+   Poster > Lägg till ny post
+
+4. Testa arbetsflödet!
+
+═══════════════════════════════════════════════════════════════════
+  💡 TIPS
+═══════════════════════════════════════════════════════════════════
+
+• Databas-sheets är dolda (men inte låsta)
+• Redigera ALLTID via vyer, inte direkt i databas
+• Rullande tid beräknas automatiskt
+• Status färgkodas: gul = spelar in, grön = klart
+• Backup regelbundet: System > Backup to JSON
+
+═══════════════════════════════════════════════════════════════════
+  🆘 PROBLEM?
+═══════════════════════════════════════════════════════════════════
+
+Läs DEPLOYMENT.md sektion "Troubleshooting"
+
+Vanligaste felen:
+  • Menu dyker inte upp → Ladda om (F5)
+  • Bootstrap fails → Kontrollera alla 5 .gs filer finns
+  • Views tomma → Kör Bootstrap igen
+
+═══════════════════════════════════════════════════════════════════
+  📞 SUPPORT
+═══════════════════════════════════════════════════════════════════
+
+GitHub: https://github.com/davidthast/gudstjanst-system
+Email: david@thast.se
+
+═══════════════════════════════════════════════════════════════════
+
+Built with ❤️ for broadcast excellence
+David Thåst • 2025

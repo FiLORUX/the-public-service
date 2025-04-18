@@ -1,0 +1,38 @@
+# Google Apps Script
+.clasp.json
+.claspignore
+
+# Node modules (if using clasp)
+node_modules/
+package-lock.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.bak
+*.log
+
+# Sensitive data (if any API keys stored locally)
+secrets.json
+credentials.json
+
+# Build artifacts
+dist/
+build/
+
+# Backup files (keep in data/ but ignore if too large)
+*.backup
+
+# Test data
+test/
+*.test.json
