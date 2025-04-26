@@ -467,6 +467,67 @@ function updatePost(postId, updates) {
 }
 
 /**
+ * Renumber all posts in a program sequentially
+ * @param {Number} programNr - Programme number (1-4)
+ */
+function renumberPostsForProgram_(programNr) {
+  const sheet = getDbSheet_(DB.POSTS);
+  const data = sheet.getDataRange().getValues();
+
+  // Get all posts for this program with their row indices
+  const posts = [];
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][POST_SCHEMA.PROGRAM_NR] === programNr) {
+      posts.push({
+        rowIndex: i + 1,  // 1-based
+        sortOrder: data[i][POST_SCHEMA.SORT_ORDER],
+        postId: data[i][POST_SCHEMA.ID]
+      });
+    }
+  }
+
+  // Sort by current sort_order
+  posts.sort((a, b) => a.sortOrder - b.sortOrder);
+
+  // Renumber sequentially (10, 20, 30, ...)
+  posts.forEach((post, index) => {
+    const newSortOrder = (index + 1) * 10;
+    sheet.getRange(post.rowIndex, POST_SCHEMA.SORT_ORDER + 1).setValue(newSortOrder);
+  });
+
+  Logger.log(`Renumbered ${posts.length} posts for Program ${programNr}`);
+}
+
+/**
+ * Renumber all posts in all programs
+ */
+function renumberAllPosts() {
+  const ui = SpreadsheetApp.getUi();
+
+  const confirm = ui.alert(
+    'Omnumrera poster',
+    'Detta kommer att omnumrera alla poster i alla program (1-4) så att sort_order blir sekventiell (10, 20, 30...).\n\nOrdningen på posterna ändras INTE, bara de interna sorteringsnumren.\n\nFortsätt?',
+    ui.ButtonSet.YES_NO
+  );
+
+  if (confirm !== ui.Button.YES) {
+    return;
+  }
+
+  try {
+    for (let i = 1; i <= 4; i++) {
+      renumberPostsForProgram_(i);
+    }
+
+    ui.alert('Klart!', 'Alla poster har omnumrerats.', ui.ButtonSet.OK);
+
+  } catch (error) {
+    ui.alert('Fel', `Kunde inte omnumrera: ${error.message}`, ui.ButtonSet.OK);
+    Logger.log(`Renumber error: ${error.stack}`);
+  }
+}
+
+/**
  * Delete post by ID
  */
 function deletePost(postId) {

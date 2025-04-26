@@ -265,6 +265,56 @@ function findPersonByName_(name) {
 }
 
 // ============================================================================
+// DELETE POST
+// ============================================================================
+
+/**
+ * Delete currently selected post
+ */
+function deleteCurrentPost() {
+  const ui = SpreadsheetApp.getUi();
+  const postId = getCurrentPostId_();
+
+  if (!postId) {
+    ui.alert('Ingen post vald', 'Markera en rad med en post först (klicka på en cell i post-raden)', ui.ButtonSet.OK);
+    return;
+  }
+
+  // Get post details for confirmation
+  const sheet = SpreadsheetApp.getActiveSheet();
+  const row = sheet.getActiveCell().getRow();
+  const postTitle = sheet.getRange(row, 3).getValue(); // Column C = Innehåll
+
+  const confirm = ui.alert(
+    'Radera post?',
+    `Vill du verkligen radera post ${postId}?\n\n"${postTitle}"\n\nDetta kan inte ångras!`,
+    ui.ButtonSet.YES_NO
+  );
+
+  if (confirm !== ui.Button.YES) {
+    return;
+  }
+
+  try {
+    deletePost(postId);
+
+    // Determine which program we're in and refresh
+    const sheetName = sheet.getName();
+    const match = sheetName.match(/Program (\d)/);
+    if (match) {
+      const programNr = parseInt(match[1], 10);
+      refreshProgramView(programNr);
+    }
+
+    ui.alert('Post raderad', `Post ${postId} har raderats.`, ui.ButtonSet.OK);
+
+  } catch (error) {
+    ui.alert('Fel', `Kunde inte radera post: ${error.message}`, ui.ButtonSet.OK);
+    Logger.log(`Delete post error: ${error.stack}`);
+  }
+}
+
+// ============================================================================
 // POST STATUS UPDATES
 // ============================================================================
 
@@ -329,18 +379,257 @@ function getCurrentPostId_() {
  * Move current post up in sort order
  */
 function movePostUp() {
-  const ui = SpreadsheetApp.getUi();
-  ui.alert('Post reordering', 'This feature will be implemented in the next version', ui.ButtonSet.OK);
-  // TODO: Implement by swapping sort_order values
+  movePost_(-1);
 }
 
 /**
  * Move current post down in sort order
  */
 function movePostDown() {
+  movePost_(1);
+}
+
+/**
+ * Move post up or down by swapping sort_order values
+ * @param {Number} direction - -1 for up, 1 for down
+ */
+function movePost_(direction) {
   const ui = SpreadsheetApp.getUi();
-  ui.alert('Post reordering', 'This feature will be implemented in the next version', ui.ButtonSet.OK);
-  // TODO: Implement by swapping sort_order values
+  const sheet = SpreadsheetApp.getActiveSheet();
+  const sheetName = sheet.getName();
+
+  // Verify we're in a programme view
+  const match = sheetName.match(/^Program (\d)$/);
+  if (!match) {
+    ui.alert('Fel', 'Denna funktion fungerar bara i Program-vyer (Program 1-4)', ui.ButtonSet.OK);
+    return;
+  }
+
+  const programNr = parseInt(match[1], 10);
+  const postId = getCurrentPostId_();
+
+  if (!postId) {
+    ui.alert('Ingen post vald', 'Markera en rad med en post först', ui.ButtonSet.OK);
+    return;
+  }
+
+  try {
+    // Get all posts for this program, sorted by sort_order
+    const posts = getAllPostsForProgram_(programNr);
+    posts.sort((a, b) => a[POST_SCHEMA.SORT_ORDER] - b[POST_SCHEMA.SORT_ORDER]);
+
+    // Find current post index
+    let currentIndex = -1;
+    for (let i = 0; i < posts.length; i++) {
+      if (posts[i][POST_SCHEMA.ID] === postId) {
+        currentIndex = i;
+        break;
+      }
+    }
+
+    if (currentIndex === -1) {
+      throw new Error('Posten hittades inte i databasen');
+    }
+
+    // Calculate target index
+    const targetIndex = currentIndex + direction;
+
+    // Check bounds
+    if (targetIndex < 0) {
+      ui.alert('Kan inte flytta', 'Posten är redan överst i listan', ui.ButtonSet.OK);
+      return;
+    }
+    if (targetIndex >= posts.length) {
+      ui.alert('Kan inte flytta', 'Posten är redan längst ner i listan', ui.ButtonSet.OK);
+      return;
+    }
+
+    // Get the two posts to swap
+    const currentPost = posts[currentIndex];
+    const targetPost = posts[targetIndex];
+
+    // Swap sort_order values
+    const currentSortOrder = currentPost[POST_SCHEMA.SORT_ORDER];
+    const targetSortOrder = targetPost[POST_SCHEMA.SORT_ORDER];
+
+    // Update both posts in database
+    updatePost(currentPost[POST_SCHEMA.ID], { sort_order: targetSortOrder });
+    updatePost(targetPost[POST_SCHEMA.ID], { sort_order: currentSortOrder });
+
+    // Refresh the view
+    refreshProgramView(programNr);
+
+    // Show confirmation
+    const directionText = direction === -1 ? 'upp' : 'ner';
+    SpreadsheetApp.getActiveSpreadsheet().toast(
+      `Post ${postId} flyttad ${directionText}`,
+      'Post flyttad',
+      2
+    );
+
+  } catch (error) {
+    ui.alert('Fel', `Kunde inte flytta post: ${error.message}`, ui.ButtonSet.OK);
+    Logger.log(`Move post error: ${error.stack}`);
+  }
+}
+
+// ============================================================================
+// PERSON MANAGEMENT DIALOGUES
+// ============================================================================
+
+/**
+ * Show dialogue for adding new person
+ */
+function showAddPersonDialog() {
+  const ui = SpreadsheetApp.getUi();
+
+  const html = HtmlService.createHtmlOutput(`
+    <style>
+      body {
+        font-family: 'Roboto', Arial, sans-serif;
+        padding: 20px;
+        font-size: 13px;
+      }
+      label {
+        display: block;
+        margin-top: 12px;
+        font-weight: 500;
+        color: #37474F;
+      }
+      input, select, textarea {
+        width: 100%;
+        padding: 8px;
+        margin-top: 4px;
+        border: 1px solid #CFD8DC;
+        border-radius: 4px;
+        font-size: 13px;
+        font-family: inherit;
+        box-sizing: border-box;
+      }
+      .required::after {
+        content: ' *';
+        color: #E53935;
+      }
+      button {
+        margin-top: 20px;
+        padding: 10px 24px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+      }
+      button:hover {
+        background-color: #45A049;
+      }
+      .cancel-btn {
+        background-color: #9E9E9E;
+        margin-left: 8px;
+      }
+      .cancel-btn:hover {
+        background-color: #757575;
+      }
+      .help-text {
+        font-size: 11px;
+        color: #78909C;
+        margin-top: 4px;
+      }
+    </style>
+
+    <h2>👥 Lägg till person</h2>
+
+    <label class="required">Namn</label>
+    <input type="text" id="name" placeholder="T.ex. 'Maria Löfgren'" />
+
+    <label>Roll(er)</label>
+    <input type="text" id="roles" placeholder="T.ex. 'predikant, liturg'" />
+    <div class="help-text">Kommaseparerat om flera roller</div>
+
+    <label>Kontakt</label>
+    <input type="text" id="contact" placeholder="E-post eller telefon" />
+
+    <label>Typ</label>
+    <select id="type">
+      <option value="medverkande">Medverkande (i gudstjänsten)</option>
+      <option value="team">Team (produktionspersonal)</option>
+      <option value="kompositör">Kompositör</option>
+      <option value="textförfattare">Textförfattare</option>
+    </select>
+
+    <button onclick="savePerson()">Skapa person</button>
+    <button class="cancel-btn" onclick="google.script.host.close()">Avbryt</button>
+
+    <script>
+      function savePerson() {
+        const data = {
+          name: document.getElementById('name').value.trim(),
+          roles: document.getElementById('roles').value.trim(),
+          contact: document.getElementById('contact').value.trim(),
+          type: document.getElementById('type').value
+        };
+
+        if (!data.name) {
+          alert('Namn måste anges');
+          return;
+        }
+
+        google.script.run
+          .withSuccessHandler((personId) => {
+            alert('Person skapad: ' + personId);
+            google.script.host.close();
+          })
+          .withFailureHandler((error) => {
+            alert('Fel: ' + error.message);
+          })
+          .createPersonFromDialog(data);
+      }
+    </script>
+  `)
+    .setWidth(450)
+    .setHeight(450);
+
+  ui.showModalDialog(html, 'Ny person');
+}
+
+/**
+ * Server-side function called from person dialogue
+ */
+function createPersonFromDialog(data) {
+  // Check if person already exists
+  const existing = findPersonByName_(data.name);
+  if (existing) {
+    throw new Error(`En person med namnet "${data.name}" finns redan (ID: ${existing[PERSON_SCHEMA.ID]})`);
+  }
+
+  // Create person in database
+  const personId = createPerson({
+    name: data.name,
+    roles: data.roles,
+    contact: data.contact,
+    type: data.type
+  });
+
+  Logger.log(`Created person from dialog: ${personId}`);
+  return personId;
+}
+
+/**
+ * Show list of all people
+ */
+function showPeopleList() {
+  const ui = SpreadsheetApp.getUi();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // Navigate to credits view which shows all people
+  const sheet = ss.getSheetByName(VIEW.CREDITS);
+  if (sheet) {
+    ss.setActiveSheet(sheet);
+    ui.alert('Kreditlista', 'Här visas alla registrerade personer.\n\nFör att lägga till ny person:\nPersoner > Lägg till person', ui.ButtonSet.OK);
+  } else {
+    ui.alert('Fel', 'Kreditlista-bladet finns inte. Kör System > Generate All Views först.', ui.ButtonSet.OK);
+  }
 }
 
 // ============================================================================
@@ -448,6 +737,175 @@ function showDocumentation() {
     'Full dokumentation: github.com/davidthast/gudstjanst-system',
     ui.ButtonSet.OK
   );
+}
+
+// ============================================================================
+// SETTINGS DIALOG
+// ============================================================================
+
+/**
+ * Show system settings dialog
+ */
+function showSettingsDialog() {
+  const ui = SpreadsheetApp.getUi();
+
+  // Get current settings
+  const settingsSheet = getDbSheet_(DB.SETTINGS);
+  const settingsData = settingsSheet.getDataRange().getValues();
+
+  // Build settings object
+  const settings = {};
+  for (let i = 1; i < settingsData.length; i++) {
+    settings[settingsData[i][0]] = settingsData[i][1];
+  }
+
+  const html = HtmlService.createHtmlOutput(`
+    <style>
+      body {
+        font-family: 'Roboto', Arial, sans-serif;
+        padding: 20px;
+        font-size: 13px;
+      }
+      h2 {
+        color: #37474F;
+        margin-bottom: 20px;
+      }
+      .setting-group {
+        margin-bottom: 20px;
+        padding: 15px;
+        background: #F5F5F5;
+        border-radius: 8px;
+      }
+      .setting-group h3 {
+        margin: 0 0 10px 0;
+        font-size: 14px;
+        color: #455A64;
+      }
+      label {
+        display: block;
+        margin-top: 10px;
+        font-weight: 500;
+        color: #37474F;
+      }
+      input, select {
+        width: 100%;
+        padding: 8px;
+        margin-top: 4px;
+        border: 1px solid #CFD8DC;
+        border-radius: 4px;
+        font-size: 13px;
+        box-sizing: border-box;
+      }
+      .help-text {
+        font-size: 11px;
+        color: #78909C;
+        margin-top: 4px;
+      }
+      .info-box {
+        background: #E3F2FD;
+        padding: 10px;
+        border-radius: 4px;
+        margin-bottom: 15px;
+        font-size: 12px;
+      }
+      button {
+        margin-top: 20px;
+        padding: 10px 24px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+      }
+      button:hover {
+        background-color: #45A049;
+      }
+      .cancel-btn {
+        background-color: #9E9E9E;
+        margin-left: 8px;
+      }
+    </style>
+
+    <h2>⚙️ Systeminställningar</h2>
+
+    <div class="info-box">
+      <strong>Version:</strong> ${settings['system_version'] || 'Okänd'}<br>
+      <strong>Senaste bootstrap:</strong> ${settings['last_bootstrap'] || 'Aldrig'}
+    </div>
+
+    <div class="setting-group">
+      <h3>📍 Platsinställningar</h3>
+      <label>Standardplats (kyrka)</label>
+      <input type="text" id="location_name" value="${settings['location_name'] || ''}" />
+      <div class="help-text">Används som default vid nya program</div>
+    </div>
+
+    <div class="setting-group">
+      <h3>⏰ Tidsinställningar</h3>
+      <label>Standard starttid (Dag 1)</label>
+      <input type="text" id="default_start_time" value="${settings['default_start_time'] || '09:00:00'}" placeholder="HH:MM:SS" />
+      <div class="help-text">Format: HH:MM:SS (t.ex. 09:00:00)</div>
+    </div>
+
+    <div class="setting-group">
+      <h3>🔌 API-inställningar</h3>
+      <label>API aktiverat</label>
+      <select id="api_enabled">
+        <option value="false" ${settings['api_enabled'] !== 'true' ? 'selected' : ''}>Nej (standard)</option>
+        <option value="true" ${settings['api_enabled'] === 'true' ? 'selected' : ''}>Ja</option>
+      </select>
+      <div class="help-text">Aktivera för Companion/vMix-integration</div>
+    </div>
+
+    <button onclick="saveSettings()">Spara inställningar</button>
+    <button class="cancel-btn" onclick="google.script.host.close()">Avbryt</button>
+
+    <script>
+      function saveSettings() {
+        const data = {
+          location_name: document.getElementById('location_name').value,
+          default_start_time: document.getElementById('default_start_time').value,
+          api_enabled: document.getElementById('api_enabled').value
+        };
+
+        google.script.run
+          .withSuccessHandler(() => {
+            alert('Inställningar sparade!');
+            google.script.host.close();
+          })
+          .withFailureHandler((error) => {
+            alert('Fel: ' + error.message);
+          })
+          .saveSettingsFromDialog(data);
+      }
+    </script>
+  `)
+    .setWidth(500)
+    .setHeight(550);
+
+  ui.showModalDialog(html, 'Systeminställningar');
+}
+
+/**
+ * Save settings from dialog
+ */
+function saveSettingsFromDialog(data) {
+  const sheet = getDbSheet_(DB.SETTINGS);
+  const settingsData = sheet.getDataRange().getValues();
+
+  // Update each setting
+  Object.keys(data).forEach(key => {
+    for (let i = 1; i < settingsData.length; i++) {
+      if (settingsData[i][0] === key) {
+        sheet.getRange(i + 1, 2).setValue(data[key]);
+        break;
+      }
+    }
+  });
+
+  Logger.log('Settings saved from dialog');
 }
 
 // ============================================================================

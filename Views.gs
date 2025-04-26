@@ -130,16 +130,36 @@ function createProgramView_(programNr) {
   // ================================
   // DATA SECTION (Row 7+)
   // ================================
-  
-  // Main QUERY formula to pull data from _DB_Posts
-  // This is the CORE of the view - everything comes from the database
-  const queryFormula = `=QUERY(_DB_Posts!A:T,
-    "SELECT A, D, E, G, F, F, H, L, N, K 
+
+  // QUERY formula for columns A-E (NR, Typ, Innehåll, Medverkande, Dur)
+  // Database columns: A=post_id, D=type, E=title, G=people_ids, F=duration_sec
+  const queryFormulaLeft = `=QUERY(_DB_Posts!A:T,
+    "SELECT A, D, E, G, F
      WHERE B = ${programNr}
      ORDER BY C",
     0)`;
-  
-  sheet.getRange('A7').setFormula(queryFormula);
+  sheet.getRange('A7').setFormula(queryFormulaLeft);
+
+  // Column F: Rullande tid (cumulative duration) - calculated with array formula
+  // Converts seconds to HH:MM:SS and calculates running total
+  const rollingFormula = `=ARRAYFORMULA(
+    IF(E7:E="","",
+      TEXT(
+        SUMIF(ROW(E7:E),"<="&ROW(E7:E),E7:E)/86400,
+        "[hh]:mm:ss"
+      )
+    )
+  )`;
+  sheet.getRange('F7').setFormula(rollingFormula);
+
+  // QUERY formula for columns G-J (Plats, Dag, Status, Anteckningar)
+  // Database columns: H=location, L=recording_day, N=status, K=notes
+  const queryFormulaRight = `=QUERY(_DB_Posts!A:T,
+    "SELECT H, L, N, K
+     WHERE B = ${programNr}
+     ORDER BY C",
+    0)`;
+  sheet.getRange('G7').setFormula(queryFormulaRight);
   
   // Set column widths
   const widths = [70, 130, 300, 200, 80, 90, 130, 90, 110, 250];
