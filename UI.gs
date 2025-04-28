@@ -265,6 +265,261 @@ function findPersonByName_(name) {
 }
 
 // ============================================================================
+// IMPORT DIALOG
+// ============================================================================
+
+/**
+ * Show dialog for importing posts from CSV/TSV
+ */
+function showImportDialog() {
+  const ui = SpreadsheetApp.getUi();
+
+  const html = HtmlService.createHtmlOutput(`
+    <style>
+      body {
+        font-family: 'Roboto', Arial, sans-serif;
+        padding: 20px;
+        font-size: 13px;
+      }
+      h2 {
+        color: #37474F;
+        margin-bottom: 10px;
+      }
+      label {
+        display: block;
+        margin-top: 15px;
+        font-weight: 500;
+        color: #37474F;
+      }
+      select, textarea {
+        width: 100%;
+        padding: 8px;
+        margin-top: 4px;
+        border: 1px solid #CFD8DC;
+        border-radius: 4px;
+        font-size: 13px;
+        font-family: inherit;
+        box-sizing: border-box;
+      }
+      textarea {
+        min-height: 200px;
+        font-family: monospace;
+        font-size: 11px;
+      }
+      .help-text {
+        font-size: 11px;
+        color: #78909C;
+        margin-top: 4px;
+      }
+      .format-box {
+        background: #E3F2FD;
+        padding: 10px;
+        border-radius: 4px;
+        margin: 15px 0;
+        font-size: 11px;
+      }
+      .format-box code {
+        background: #BBDEFB;
+        padding: 2px 4px;
+        border-radius: 2px;
+      }
+      button {
+        margin-top: 20px;
+        padding: 10px 24px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+      }
+      button:hover {
+        background-color: #45A049;
+      }
+      .cancel-btn {
+        background-color: #9E9E9E;
+        margin-left: 8px;
+      }
+      .cancel-btn:hover {
+        background-color: #757575;
+      }
+      .result {
+        margin-top: 15px;
+        padding: 10px;
+        border-radius: 4px;
+        display: none;
+      }
+      .result.success {
+        background: #C8E6C9;
+        display: block;
+      }
+      .result.error {
+        background: #FFCDD2;
+        display: block;
+      }
+    </style>
+
+    <h2>📋 Importera poster</h2>
+
+    <label>Program att importera till</label>
+    <select id="program">
+      <option value="1">Program 1</option>
+      <option value="2">Program 2</option>
+      <option value="3">Program 3</option>
+      <option value="4">Program 4</option>
+    </select>
+
+    <label>Format</label>
+    <select id="format">
+      <option value="tsv">TSV (tab-separerat)</option>
+      <option value="csv">CSV (komma-separerat)</option>
+    </select>
+
+    <div class="format-box">
+      <strong>Förväntat format (en rad per post):</strong><br>
+      <code>typ</code> <code>innehåll</code> <code>medverkande</code> <code>duration</code> <code>plats</code> <code>dag</code> <code>anteckningar</code><br><br>
+      <strong>Exempel (TSV):</strong><br>
+      <code>predikan&emsp;Predikan om kärlek&emsp;Maria Löfgren&emsp;7:00&emsp;talarplats&emsp;dag1&emsp;</code>
+    </div>
+
+    <label>Klistra in data</label>
+    <textarea id="data" placeholder="Klistra in dina poster här (en rad per post)..."></textarea>
+    <div class="help-text">Tips: Kopiera direkt från Excel eller Google Sheets</div>
+
+    <div id="result" class="result"></div>
+
+    <button onclick="importData()">Importera</button>
+    <button class="cancel-btn" onclick="google.script.host.close()">Avbryt</button>
+
+    <script>
+      function importData() {
+        const data = {
+          program_nr: parseInt(document.getElementById('program').value),
+          format: document.getElementById('format').value,
+          data: document.getElementById('data').value.trim()
+        };
+
+        if (!data.data) {
+          showResult('Ingen data att importera', true);
+          return;
+        }
+
+        document.getElementById('result').innerHTML = 'Importerar...';
+        document.getElementById('result').className = 'result success';
+
+        google.script.run
+          .withSuccessHandler((result) => {
+            showResult(result.message, false);
+            if (result.success) {
+              setTimeout(() => google.script.host.close(), 2000);
+            }
+          })
+          .withFailureHandler((error) => {
+            showResult('Fel: ' + error.message, true);
+          })
+          .importPostsFromDialog(data);
+      }
+
+      function showResult(message, isError) {
+        const el = document.getElementById('result');
+        el.innerHTML = message;
+        el.className = 'result ' + (isError ? 'error' : 'success');
+      }
+    </script>
+  `)
+    .setWidth(600)
+    .setHeight(650);
+
+  ui.showModalDialog(html, 'Importera poster');
+}
+
+/**
+ * Server-side function to import posts from dialog
+ */
+function importPostsFromDialog(data) {
+  const { program_nr, format, data: rawData } = data;
+
+  // Parse the data
+  const delimiter = format === 'csv' ? ',' : '\t';
+  const lines = rawData.split('\n').filter(line => line.trim());
+
+  if (lines.length === 0) {
+    return { success: false, message: 'Ingen data att importera' };
+  }
+
+  let imported = 0;
+  let errors = [];
+
+  lines.forEach((line, index) => {
+    try {
+      const parts = line.split(delimiter);
+
+      // Expected: typ, innehåll, medverkande, duration, plats, dag, anteckningar
+      const postData = {
+        program_nr: program_nr,
+        type: (parts[0] || 'liturgi').trim().toLowerCase(),
+        title: (parts[1] || '').trim(),
+        recording_day: (parts[5] || 'dag1').trim().toLowerCase(),
+        location: (parts[4] || '').trim(),
+        notes: (parts[6] || '').trim()
+      };
+
+      // Parse duration
+      if (parts[3]) {
+        postData.duration = parseDurationToSeconds_(parts[3].trim());
+      }
+
+      // Skip empty titles
+      if (!postData.title) {
+        errors.push(`Rad ${index + 1}: Tom titel, hoppar över`);
+        return;
+      }
+
+      // Create the post
+      const postId = createPost(postData);
+
+      // Handle people if specified
+      if (parts[2] && parts[2].trim()) {
+        const peopleNames = parts[2].split(',').map(n => n.trim()).filter(n => n);
+        const peopleIds = [];
+
+        peopleNames.forEach(name => {
+          const existing = findPersonByName_(name);
+          if (existing) {
+            peopleIds.push(existing[PERSON_SCHEMA.ID]);
+          } else {
+            const newId = createPerson({ name: name });
+            peopleIds.push(newId);
+          }
+        });
+
+        if (peopleIds.length > 0) {
+          updatePost(postId, { people_ids: peopleIds.join(',') });
+        }
+      }
+
+      imported++;
+    } catch (error) {
+      errors.push(`Rad ${index + 1}: ${error.message}`);
+    }
+  });
+
+  // Refresh the view
+  refreshProgramView(program_nr);
+
+  let message = `Importerade ${imported} av ${lines.length} poster till Program ${program_nr}.`;
+  if (errors.length > 0) {
+    message += `\n\nVarningar:\n${errors.slice(0, 5).join('\n')}`;
+    if (errors.length > 5) {
+      message += `\n... och ${errors.length - 5} till`;
+    }
+  }
+
+  return { success: imported > 0, message: message };
+}
+
+// ============================================================================
 // DELETE POST
 // ============================================================================
 

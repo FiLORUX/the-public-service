@@ -131,35 +131,71 @@ function createProgramView_(programNr) {
   // DATA SECTION (Row 7+)
   // ================================
 
-  // QUERY formula for columns A-E (NR, Typ, Innehåll, Medverkande, Dur)
-  // Database columns: A=post_id, D=type, E=title, G=people_ids, F=duration_sec
-  const queryFormulaLeft = `=QUERY(_DB_Posts!A:T,
-    "SELECT A, D, E, G, F
-     WHERE B = ${programNr}
-     ORDER BY C",
-    0)`;
-  sheet.getRange('A7').setFormula(queryFormulaLeft);
+  // Column A: Post ID
+  const queryA = `=QUERY(_DB_Posts!A:T, "SELECT A WHERE B = ${programNr} ORDER BY C", 0)`;
+  sheet.getRange('A7').setFormula(queryA);
 
-  // Column F: Rullande tid (cumulative duration) - calculated with array formula
-  // Converts seconds to HH:MM:SS and calculates running total
+  // Column B: Typ (post type)
+  const queryB = `=QUERY(_DB_Posts!A:T, "SELECT D WHERE B = ${programNr} ORDER BY C", 0)`;
+  sheet.getRange('B7').setFormula(queryB);
+
+  // Column C: Innehåll (title)
+  const queryC = `=QUERY(_DB_Posts!A:T, "SELECT E WHERE B = ${programNr} ORDER BY C", 0)`;
+  sheet.getRange('C7').setFormula(queryC);
+
+  // Column D: Medverkande - use custom function to lookup names from person IDs
+  // PEOPLE_NAMES is a custom function defined in Database.gs
+  const queryD = `=ARRAYFORMULA(
+    IF(A7:A="","",
+      PEOPLE_NAMES(QUERY(_DB_Posts!A:T, "SELECT G WHERE B = ${programNr} ORDER BY C", 0))
+    )
+  )`;
+  sheet.getRange('D7').setFormula(queryD);
+
+  // Column E: Duration formatted as MM:SS
+  const queryE = `=ARRAYFORMULA(
+    IF(QUERY(_DB_Posts!A:T, "SELECT F WHERE B = ${programNr} ORDER BY C", 0)="","",
+      TEXT(QUERY(_DB_Posts!A:T, "SELECT F WHERE B = ${programNr} ORDER BY C", 0)/86400, "[mm]:ss")
+    )
+  )`;
+  sheet.getRange('E7').setFormula(queryE);
+
+  // Column F: Rullande tid (cumulative duration)
+  // Uses MMULT for proper cumulative sum calculation
   const rollingFormula = `=ARRAYFORMULA(
-    IF(E7:E="","",
-      TEXT(
-        SUMIF(ROW(E7:E),"<="&ROW(E7:E),E7:E)/86400,
-        "[hh]:mm:ss"
+    LET(
+      durations, QUERY(_DB_Posts!A:T, "SELECT F WHERE B = ${programNr} ORDER BY C", 0),
+      n, COUNTA(durations),
+      IF(n=0, "",
+        IF(SEQUENCE(n)>n, "",
+          TEXT(
+            MMULT(
+              IF(SEQUENCE(n)>=TRANSPOSE(SEQUENCE(n)), 1, 0),
+              durations
+            )/86400,
+            "[hh]:mm:ss"
+          )
+        )
       )
     )
   )`;
   sheet.getRange('F7').setFormula(rollingFormula);
 
-  // QUERY formula for columns G-J (Plats, Dag, Status, Anteckningar)
-  // Database columns: H=location, L=recording_day, N=status, K=notes
-  const queryFormulaRight = `=QUERY(_DB_Posts!A:T,
-    "SELECT H, L, N, K
-     WHERE B = ${programNr}
-     ORDER BY C",
-    0)`;
-  sheet.getRange('G7').setFormula(queryFormulaRight);
+  // Column G: Plats (location)
+  const queryG = `=QUERY(_DB_Posts!A:T, "SELECT H WHERE B = ${programNr} ORDER BY C", 0)`;
+  sheet.getRange('G7').setFormula(queryG);
+
+  // Column H: Dag (recording day)
+  const queryH = `=QUERY(_DB_Posts!A:T, "SELECT L WHERE B = ${programNr} ORDER BY C", 0)`;
+  sheet.getRange('H7').setFormula(queryH);
+
+  // Column I: Status
+  const queryI = `=QUERY(_DB_Posts!A:T, "SELECT N WHERE B = ${programNr} ORDER BY C", 0)`;
+  sheet.getRange('I7').setFormula(queryI);
+
+  // Column J: Anteckningar (notes)
+  const queryJ = `=QUERY(_DB_Posts!A:T, "SELECT K WHERE B = ${programNr} ORDER BY C", 0)`;
+  sheet.getRange('J7').setFormula(queryJ);
   
   // Set column widths
   const widths = [70, 130, 300, 200, 80, 90, 130, 90, 110, 250];
@@ -236,29 +272,30 @@ function createProgramView_(programNr) {
  */
 function applyProgramViewFormatting_(sheet) {
   // Status-based row colouring (column I = Status)
+  // Note: QUERY returns database keys (lowercase), not display names
   const dataRange = sheet.getRange('A7:J500');
-  
-  // Green for "Inspelad"
+
+  // Green for "inspelad" (database key)
   const ruleRecorded = SpreadsheetApp.newConditionalFormatRule()
-    .whenTextEqualTo(POST_STATUS.RECORDED.display)
+    .whenTextEqualTo(POST_STATUS.RECORDED.key)
     .setBackground(POST_STATUS.RECORDED.colour)
     .setRanges([dataRange])
     .build();
-  
-  // Darker green for "Godkänd"
+
+  // Darker green for "godkand" (database key)
   const ruleApproved = SpreadsheetApp.newConditionalFormatRule()
-    .whenTextEqualTo(POST_STATUS.APPROVED.display)
+    .whenTextEqualTo(POST_STATUS.APPROVED.key)
     .setBackground(POST_STATUS.APPROVED.colour)
     .setRanges([dataRange])
     .build();
-  
-  // Yellow for "Spelar in"
+
+  // Yellow for "recording" (database key)
   const ruleRecording = SpreadsheetApp.newConditionalFormatRule()
-    .whenTextEqualTo(POST_STATUS.RECORDING.display)
+    .whenTextEqualTo(POST_STATUS.RECORDING.key)
     .setBackground(POST_STATUS.RECORDING.colour)
     .setRanges([dataRange])
     .build();
-  
+
   const rules = [ruleRecorded, ruleApproved, ruleRecording];
   sheet.setConditionalFormatRules(rules);
 }
@@ -340,33 +377,33 @@ function createScheduleView_() {
  */
 function applyScheduleViewFormatting_(sheet) {
   const dataRange = sheet.getRange('A5:I500');
-  
-  // Status-based formatting (column I)
+
+  // Status-based formatting (column I) - use database keys
   const ruleRecorded = SpreadsheetApp.newConditionalFormatRule()
-    .whenTextEqualTo(POST_STATUS.RECORDED.display)
+    .whenTextEqualTo(POST_STATUS.RECORDED.key)
     .setBackground(POST_STATUS.RECORDED.colour)
     .setRanges([dataRange])
     .build();
-  
+
   const ruleApproved = SpreadsheetApp.newConditionalFormatRule()
-    .whenTextEqualTo(POST_STATUS.APPROVED.display)
+    .whenTextEqualTo(POST_STATUS.APPROVED.key)
     .setBackground(POST_STATUS.APPROVED.colour)
     .setRanges([dataRange])
     .build();
-  
+
   const ruleRecording = SpreadsheetApp.newConditionalFormatRule()
-    .whenTextEqualTo(POST_STATUS.RECORDING.display)
+    .whenTextEqualTo(POST_STATUS.RECORDING.key)
     .setBackground(POST_STATUS.RECORDING.colour)
     .setRanges([dataRange])
     .build();
-  
+
   // Alternate row banding for readability
   const ruleBanding = SpreadsheetApp.newConditionalFormatRule()
     .whenFormulaSatisfied('=MOD(ROW(),2)=0')
     .setBackground('#F9F9F9')
     .setRanges([dataRange])
     .build();
-  
+
   const rules = [ruleBanding, ruleRecorded, ruleApproved, ruleRecording];
   sheet.setConditionalFormatRules(rules);
 }

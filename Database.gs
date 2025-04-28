@@ -588,6 +588,50 @@ function getAllPeople_() {
   return data.slice(1);  // Skip header
 }
 
+/**
+ * Get person name by ID
+ * @param {String} personId - Person ID (e.g. "PXYZ123")
+ * @returns {String} - Person name or original ID if not found
+ */
+function getPersonNameById_(personId) {
+  if (!personId) return '';
+
+  const sheet = getDbSheet_(DB.PEOPLE);
+  const data = sheet.getDataRange().getValues();
+
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][PERSON_SCHEMA.ID] === personId) {
+      return data[i][PERSON_SCHEMA.NAME];
+    }
+  }
+
+  return personId;  // Return ID if not found
+}
+
+/**
+ * Convert comma-separated person IDs to names
+ * @param {String} peopleIds - Comma-separated person IDs
+ * @returns {String} - Comma-separated names
+ */
+function convertPeopleIdsToNames(peopleIds) {
+  if (!peopleIds) return '';
+
+  const ids = peopleIds.split(',').map(id => id.trim()).filter(id => id);
+  const names = ids.map(id => getPersonNameById_(id));
+
+  return names.join(', ');
+}
+
+/**
+ * Custom function for use in spreadsheet formulas
+ * @param {String} peopleIds - Comma-separated person IDs
+ * @returns {String} - Comma-separated names
+ * @customfunction
+ */
+function PEOPLE_NAMES(peopleIds) {
+  return convertPeopleIdsToNames(peopleIds);
+}
+
 // ============================================================================
 // DATABASE OPERATIONS - Post Types
 // ============================================================================
