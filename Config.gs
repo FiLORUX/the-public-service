@@ -261,18 +261,43 @@ const TIME_FORMAT = {
 };
 
 // ============================================================================
-// EXTERNAL API CONFIGURATION (prepared but not implemented yet)
+// EXTERNAL API CONFIGURATION
 // ============================================================================
 
+/**
+ * API is always enabled when deployed as Web App.
+ * See API.md for full documentation.
+ *
+ * Supported integrations:
+ * - Bitfocus Companion (HTTP module)
+ * - vMix (scripting)
+ * - BMD HyperDeck (via Companion)
+ * - Any HTTP client
+ *
+ * Deploy: Extensions > Apps Script > Deploy > Web app
+ */
 const API_CONFIG = {
-  ENABLED: false,  // Set to true when implementing Companion integration
+  // API endpoints (for reference, actual routing is in Triggers.gs)
   ENDPOINTS: {
-    TC_IN: '/api/timecode/in',
-    TC_OUT: '/api/timecode/out',
-    NEXT_CLIP: '/api/clip/next',
-    STATUS_UPDATE: '/api/post/status'
-  },
-  WEBHOOK_SECRET: null  // Set via script properties for security
+    // POST actions
+    TC_IN: 'tc_in',
+    TC_OUT: 'tc_out',
+    SET_RECORDING: 'set_recording',
+    MARK_RECORDED: 'mark_recorded',
+    MARK_APPROVED: 'mark_approved',
+    STATUS_UPDATE: 'status_update',
+    GET_POSTS: 'get_posts',
+    GET_NEXT: 'get_next',
+    GET_SCHEDULE: 'get_schedule',
+    INCREMENT_CLIP: 'increment_clip',
+    // GET actions (via query param ?action=)
+    STATUS: 'status',
+    POSTS: 'posts',
+    SCHEDULE: 'schedule',
+    POST: 'post',
+    CURRENT: 'current',
+    CLIP_COUNTER: 'clip_counter'
+  }
 };
 
 // ============================================================================

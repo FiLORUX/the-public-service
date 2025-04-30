@@ -246,163 +246,704 @@ function installTimeTriggers() {
 }
 
 // ============================================================================
-// API WEBHOOK HANDLERS (prepared for external integration)
+// WEB APP API - FULL IMPLEMENTATION FOR COMPANION/VMIX/BMD
 // ============================================================================
 
 /**
- * Handle incoming POST request (e.g. from Companion)
- * This is called when the script is deployed as a web app
+ * Handle incoming POST requests from external systems
+ * Deploy as: Web App > Execute as: Me > Access: Anyone
+ *
+ * Supported actions:
+ * - tc_in: Log timecode IN for a post
+ * - tc_out: Log timecode OUT for a post
+ * - status_update: Update post status
+ * - get_posts: Get all posts for a program
+ * - get_current: Get currently recording post
+ * - get_next: Get next post to record
+ * - set_recording: Set a specific post as "recording"
+ * - mark_recorded: Mark post as recorded
+ * - mark_approved: Mark post as approved
  */
 function doPost(e) {
-  if (!API_CONFIG.ENABLED) {
-    return ContentService.createTextOutput(JSON.stringify({
-      error: 'API not enabled'
-    })).setMimeType(ContentService.MimeType.JSON);
-  }
-  
+  // Set CORS headers for cross-origin requests
+  const output = ContentService.createTextOutput();
+  output.setMimeType(ContentService.MimeType.JSON);
+
   try {
     const data = JSON.parse(e.postData.contents);
     const action = data.action;
-    
+
+    // Log incoming request
+    Logger.log(`API POST: action=${action}, data=${JSON.stringify(data)}`);
+
     let response = {};
-    
+
     switch (action) {
+      // Timecode logging
       case 'tc_in':
         response = handleTcIn_(data);
         break;
-        
       case 'tc_out':
         response = handleTcOut_(data);
         break;
-        
-      case 'next_clip':
-        response = handleNextClip_(data);
-        break;
-        
+
+      // Status management
       case 'status_update':
         response = handleStatusUpdate_(data);
         break;
-        
+      case 'set_recording':
+        response = handleSetRecording_(data);
+        break;
+      case 'mark_recorded':
+        response = handleMarkRecorded_(data);
+        break;
+      case 'mark_approved':
+        response = handleMarkApproved_(data);
+        break;
+
+      // Data retrieval
+      case 'get_posts':
+        response = handleGetPosts_(data);
+        break;
+      case 'get_current':
+        response = handleGetCurrent_(data);
+        break;
+      case 'get_next':
+        response = handleGetNext_(data);
+        break;
+      case 'get_post':
+        response = handleGetPost_(data);
+        break;
+      case 'get_schedule':
+        response = handleGetSchedule_(data);
+        break;
+
+      // Clip management
+      case 'next_clip':
+        response = handleNextClip_(data);
+        break;
+      case 'increment_clip':
+        response = handleIncrementClip_(data);
+        break;
+
       default:
-        response = { error: 'Unknown action' };
+        response = {
+          success: false,
+          error: `Unknown action: ${action}`,
+          available_actions: [
+            'tc_in', 'tc_out', 'status_update', 'set_recording',
+            'mark_recorded', 'mark_approved', 'get_posts', 'get_current',
+            'get_next', 'get_post', 'get_schedule', 'next_clip', 'increment_clip'
+          ]
+        };
     }
-    
-    return ContentService.createTextOutput(JSON.stringify(response))
-      .setMimeType(ContentService.MimeType.JSON);
-      
+
+    return output.setContent(JSON.stringify(response));
+
   } catch (error) {
-    Logger.log(`API error: ${error.message}`);
-    return ContentService.createTextOutput(JSON.stringify({
+    Logger.log(`API error: ${error.message}\n${error.stack}`);
+    return output.setContent(JSON.stringify({
+      success: false,
       error: error.message
-    })).setMimeType(ContentService.MimeType.JSON);
+    }));
   }
 }
 
 /**
- * Handle GET request (for status checks)
+ * Handle GET requests - for status checks and data retrieval
+ *
+ * Query parameters:
+ * - action: What to retrieve (status, posts, schedule, post)
+ * - program: Program number (1-4)
+ * - post_id: Specific post ID
+ * - day: Recording day (dag1, dag2, dag3)
  */
 function doGet(e) {
-  return ContentService.createTextOutput(JSON.stringify({
-    system: SYSTEM_NAME,
-    version: SYSTEM_VERSION,
-    status: 'running',
-    api_enabled: API_CONFIG.ENABLED
-  })).setMimeType(ContentService.MimeType.JSON);
+  const output = ContentService.createTextOutput();
+  output.setMimeType(ContentService.MimeType.JSON);
+
+  try {
+    const params = e.parameter || {};
+    const action = params.action || 'status';
+
+    Logger.log(`API GET: action=${action}, params=${JSON.stringify(params)}`);
+
+    let response = {};
+
+    switch (action) {
+      case 'status':
+        response = {
+          success: true,
+          system: SYSTEM_NAME,
+          version: SYSTEM_VERSION,
+          timestamp: getTimestamp_(),
+          endpoints: {
+            POST: ['tc_in', 'tc_out', 'status_update', 'set_recording', 'mark_recorded', 'mark_approved', 'get_posts', 'get_current', 'get_next', 'get_post', 'get_schedule'],
+            GET: ['status', 'posts', 'schedule', 'post', 'current', 'clip_counter']
+          }
+        };
+        break;
+
+      case 'posts':
+        const programNr = parseInt(params.program) || 1;
+        response = handleGetPosts_({ program_nr: programNr });
+        break;
+
+      case 'schedule':
+        const day = params.day || null;
+        response = handleGetSchedule_({ recording_day: day });
+        break;
+
+      case 'post':
+        response = handleGetPost_({ post_id: params.post_id });
+        break;
+
+      case 'current':
+        response = handleGetCurrent_({});
+        break;
+
+      case 'clip_counter':
+        response = handleNextClip_({});
+        break;
+
+      default:
+        response = {
+          success: false,
+          error: `Unknown action: ${action}`,
+          available_actions: ['status', 'posts', 'schedule', 'post', 'current', 'clip_counter']
+        };
+    }
+
+    return output.setContent(JSON.stringify(response));
+
+  } catch (error) {
+    Logger.log(`API GET error: ${error.message}`);
+    return output.setContent(JSON.stringify({
+      success: false,
+      error: error.message
+    }));
+  }
 }
 
 // ============================================================================
-// API ACTION HANDLERS (stubs for future implementation)
+// TIMECODE LOGGING HANDLERS
 // ============================================================================
 
 /**
- * Handle TC-In logging from external system
+ * Handle TC-IN logging from Companion/BMD HyperDeck
+ * Expected data: { post_id, tc_in, operator?, clip_nr? }
  */
 function handleTcIn_(data) {
-  // Validate webhook secret
-  if (data.secret !== API_CONFIG.WEBHOOK_SECRET) {
-    return { error: 'Invalid secret' };
-  }
-  
   const { post_id, tc_in, operator, clip_nr } = data;
-  
+
+  if (!post_id) {
+    return { success: false, error: 'post_id required' };
+  }
+
   // Log to _DB_Logg
   const logSheet = getDbSheet_(DB.LOG);
+  const clipNumber = clip_nr || getNextClipNumber_();
+
   logSheet.appendRow([
     getTimestamp_(),
     post_id,
-    operator,
-    tc_in,
-    '',  // tc_out (empty for now)
-    clip_nr,
-    '',  // duration (calculated later)
-    'TC-IN logged'
+    operator || 'API',
+    tc_in || getTimestamp_(),
+    '',  // tc_out (filled later)
+    clipNumber,
+    '',  // duration (calculated on tc_out)
+    'TC-IN'
   ]);
-  
+
   // Update post status to "recording"
-  updatePost(post_id, { status: POST_STATUS.RECORDING.key });
-  
-  return { success: true, message: `TC-IN logged for ${post_id}` };
+  try {
+    updatePost(post_id, { status: POST_STATUS.RECORDING.key });
+  } catch (e) {
+    Logger.log(`Warning: Could not update post status: ${e.message}`);
+  }
+
+  return {
+    success: true,
+    message: `TC-IN logged for ${post_id}`,
+    post_id: post_id,
+    tc_in: tc_in,
+    clip_nr: clipNumber,
+    status: POST_STATUS.RECORDING.key
+  };
 }
 
 /**
- * Handle TC-Out logging
+ * Handle TC-OUT logging
+ * Expected data: { post_id, tc_out, clip_nr? }
  */
 function handleTcOut_(data) {
   const { post_id, tc_out, clip_nr } = data;
-  
-  // Find matching TC-IN entry in log and update it
+
+  if (!post_id) {
+    return { success: false, error: 'post_id required' };
+  }
+
+  // Find matching TC-IN entry in log
   const logSheet = getDbSheet_(DB.LOG);
   const logData = logSheet.getDataRange().getValues();
-  
+
+  // Search from bottom (most recent first)
   for (let i = logData.length - 1; i >= 1; i--) {
     const row = logData[i];
-    if (row[1] === post_id && row[5] === clip_nr && !row[4]) {
-      // Found matching entry without TC-OUT
+    const logPostId = row[1];
+    const logClipNr = row[5];
+    const logTcOut = row[4];
+
+    // Match by post_id and ensure tc_out is empty
+    if (logPostId === post_id && !logTcOut) {
+      // If clip_nr specified, must match
+      if (clip_nr && logClipNr !== clip_nr) continue;
+
       const tcIn = row[3];
-      const duration = calculateTcDuration_(tcIn, tc_out);
-      
-      // Update row
-      logSheet.getRange(i + 1, 5).setValue(tc_out);
+      const duration = tc_out && tcIn ? calculateTcDuration_(tcIn, tc_out) : 0;
+
+      // Update log row
+      logSheet.getRange(i + 1, 5).setValue(tc_out || getTimestamp_());
       logSheet.getRange(i + 1, 7).setValue(duration);
-      logSheet.getRange(i + 1, 8).setValue('TC-OUT logged');
-      
+      logSheet.getRange(i + 1, 8).setValue('TC-OUT');
+
       // Update post status to "recorded"
-      updatePost(post_id, { status: POST_STATUS.RECORDED.key });
-      
-      return { success: true, message: `TC-OUT logged for ${post_id}` };
+      try {
+        updatePost(post_id, { status: POST_STATUS.RECORDED.key });
+      } catch (e) {
+        Logger.log(`Warning: Could not update post status: ${e.message}`);
+      }
+
+      return {
+        success: true,
+        message: `TC-OUT logged for ${post_id}`,
+        post_id: post_id,
+        tc_in: tcIn,
+        tc_out: tc_out,
+        duration_sec: duration,
+        clip_nr: logClipNr,
+        status: POST_STATUS.RECORDED.key
+      };
     }
   }
-  
-  return { error: 'No matching TC-IN found' };
+
+  return { success: false, error: `No matching TC-IN found for ${post_id}` };
 }
 
-/**
- * Handle next clip request
- */
-function handleNextClip_(data) {
-  // Return info about next clip to record
-  // This could be used by Companion to auto-fill clip number
-  return { success: true, next_clip: 42 };  // Stub
-}
+// ============================================================================
+// STATUS MANAGEMENT HANDLERS
+// ============================================================================
 
 /**
- * Handle status update
+ * Update post status
+ * Expected data: { post_id, status }
  */
 function handleStatusUpdate_(data) {
   const { post_id, status } = data;
-  updatePost(post_id, { status: status });
-  return { success: true, message: `Status updated for ${post_id}` };
+
+  if (!post_id) {
+    return { success: false, error: 'post_id required' };
+  }
+
+  // Validate status
+  const validStatuses = Object.values(POST_STATUS).map(s => s.key);
+  if (status && !validStatuses.includes(status)) {
+    return {
+      success: false,
+      error: `Invalid status: ${status}`,
+      valid_statuses: validStatuses
+    };
+  }
+
+  try {
+    updatePost(post_id, { status: status || POST_STATUS.PLANNED.key });
+    return {
+      success: true,
+      message: `Status updated for ${post_id}`,
+      post_id: post_id,
+      status: status
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 }
 
 /**
- * Calculate duration between two timecodes
+ * Set specific post as "recording" (and clear any other recording posts)
+ * Expected data: { post_id }
+ */
+function handleSetRecording_(data) {
+  const { post_id, program_nr } = data;
+
+  if (!post_id) {
+    return { success: false, error: 'post_id required' };
+  }
+
+  try {
+    // Clear any currently recording posts in the same program
+    const programMatch = post_id.match(/^P(\d):/);
+    if (programMatch) {
+      const progNr = parseInt(programMatch[1]);
+      const posts = getAllPostsForProgram_(progNr);
+
+      posts.forEach(post => {
+        if (post[POST_SCHEMA.STATUS] === POST_STATUS.RECORDING.key) {
+          updatePost(post[POST_SCHEMA.ID], { status: POST_STATUS.PLANNED.key });
+        }
+      });
+    }
+
+    // Set this post as recording
+    updatePost(post_id, { status: POST_STATUS.RECORDING.key });
+
+    return {
+      success: true,
+      message: `${post_id} set as recording`,
+      post_id: post_id,
+      status: POST_STATUS.RECORDING.key
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Mark post as recorded
+ * Expected data: { post_id }
+ */
+function handleMarkRecorded_(data) {
+  const { post_id } = data;
+
+  if (!post_id) {
+    return { success: false, error: 'post_id required' };
+  }
+
+  try {
+    updatePost(post_id, { status: POST_STATUS.RECORDED.key });
+    return {
+      success: true,
+      message: `${post_id} marked as recorded`,
+      post_id: post_id,
+      status: POST_STATUS.RECORDED.key
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Mark post as approved
+ * Expected data: { post_id }
+ */
+function handleMarkApproved_(data) {
+  const { post_id } = data;
+
+  if (!post_id) {
+    return { success: false, error: 'post_id required' };
+  }
+
+  try {
+    updatePost(post_id, { status: POST_STATUS.APPROVED.key });
+    return {
+      success: true,
+      message: `${post_id} marked as approved`,
+      post_id: post_id,
+      status: POST_STATUS.APPROVED.key
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+// ============================================================================
+// DATA RETRIEVAL HANDLERS
+// ============================================================================
+
+/**
+ * Get all posts for a program
+ * Expected data: { program_nr }
+ */
+function handleGetPosts_(data) {
+  const programNr = data.program_nr || 1;
+
+  try {
+    const posts = getAllPostsForProgram_(programNr);
+    posts.sort((a, b) => a[POST_SCHEMA.SORT_ORDER] - b[POST_SCHEMA.SORT_ORDER]);
+
+    const formattedPosts = posts.map(post => formatPostForApi_(post));
+
+    return {
+      success: true,
+      program_nr: programNr,
+      count: formattedPosts.length,
+      posts: formattedPosts
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Get specific post by ID
+ * Expected data: { post_id }
+ */
+function handleGetPost_(data) {
+  const { post_id } = data;
+
+  if (!post_id) {
+    return { success: false, error: 'post_id required' };
+  }
+
+  try {
+    const sheet = getDbSheet_(DB.POSTS);
+    const allData = sheet.getDataRange().getValues();
+
+    for (let i = 1; i < allData.length; i++) {
+      if (allData[i][POST_SCHEMA.ID] === post_id) {
+        return {
+          success: true,
+          post: formatPostForApi_(allData[i])
+        };
+      }
+    }
+
+    return { success: false, error: `Post ${post_id} not found` };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Get currently recording post
+ */
+function handleGetCurrent_(data) {
+  try {
+    const sheet = getDbSheet_(DB.POSTS);
+    const allData = sheet.getDataRange().getValues();
+
+    for (let i = 1; i < allData.length; i++) {
+      if (allData[i][POST_SCHEMA.STATUS] === POST_STATUS.RECORDING.key) {
+        return {
+          success: true,
+          recording: true,
+          post: formatPostForApi_(allData[i])
+        };
+      }
+    }
+
+    return {
+      success: true,
+      recording: false,
+      post: null,
+      message: 'No post currently recording'
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Get next post to record (first "planerad" post)
+ * Expected data: { program_nr?, recording_day? }
+ */
+function handleGetNext_(data) {
+  const { program_nr, recording_day } = data;
+
+  try {
+    const sheet = getDbSheet_(DB.POSTS);
+    const allData = sheet.getDataRange().getValues();
+
+    // Filter and sort posts
+    let candidates = allData.slice(1).filter(post => {
+      if (post[POST_SCHEMA.STATUS] !== POST_STATUS.PLANNED.key) return false;
+      if (program_nr && post[POST_SCHEMA.PROGRAM_NR] !== program_nr) return false;
+      if (recording_day && post[POST_SCHEMA.RECORDING_DAY] !== recording_day) return false;
+      return true;
+    });
+
+    candidates.sort((a, b) => {
+      // Sort by program, then sort_order
+      if (a[POST_SCHEMA.PROGRAM_NR] !== b[POST_SCHEMA.PROGRAM_NR]) {
+        return a[POST_SCHEMA.PROGRAM_NR] - b[POST_SCHEMA.PROGRAM_NR];
+      }
+      return a[POST_SCHEMA.SORT_ORDER] - b[POST_SCHEMA.SORT_ORDER];
+    });
+
+    if (candidates.length > 0) {
+      return {
+        success: true,
+        has_next: true,
+        post: formatPostForApi_(candidates[0]),
+        remaining: candidates.length - 1
+      };
+    }
+
+    return {
+      success: true,
+      has_next: false,
+      post: null,
+      message: 'No more posts to record'
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Get recording schedule
+ * Expected data: { recording_day? }
+ */
+function handleGetSchedule_(data) {
+  const { recording_day } = data;
+
+  try {
+    const sheet = getDbSheet_(DB.POSTS);
+    const allData = sheet.getDataRange().getValues();
+
+    let posts = allData.slice(1);
+
+    // Filter by recording day if specified
+    if (recording_day) {
+      posts = posts.filter(p => p[POST_SCHEMA.RECORDING_DAY] === recording_day);
+    }
+
+    // Sort by recording day, then program, then sort order
+    posts.sort((a, b) => {
+      const dayOrder = { 'dag1': 1, 'dag2': 2, 'dag3': 3 };
+      const dayA = dayOrder[a[POST_SCHEMA.RECORDING_DAY]] || 99;
+      const dayB = dayOrder[b[POST_SCHEMA.RECORDING_DAY]] || 99;
+
+      if (dayA !== dayB) return dayA - dayB;
+      if (a[POST_SCHEMA.PROGRAM_NR] !== b[POST_SCHEMA.PROGRAM_NR]) {
+        return a[POST_SCHEMA.PROGRAM_NR] - b[POST_SCHEMA.PROGRAM_NR];
+      }
+      return a[POST_SCHEMA.SORT_ORDER] - b[POST_SCHEMA.SORT_ORDER];
+    });
+
+    const schedule = posts.map(post => formatPostForApi_(post));
+
+    // Calculate statistics
+    const stats = {
+      total: schedule.length,
+      planned: schedule.filter(p => p.status === 'planerad').length,
+      recording: schedule.filter(p => p.status === 'recording').length,
+      recorded: schedule.filter(p => p.status === 'inspelad').length,
+      approved: schedule.filter(p => p.status === 'godkand').length
+    };
+
+    return {
+      success: true,
+      recording_day: recording_day || 'all',
+      stats: stats,
+      schedule: schedule
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+// ============================================================================
+// CLIP COUNTER HANDLERS
+// ============================================================================
+
+/**
+ * Get next clip number
+ */
+function handleNextClip_(data) {
+  const nextClip = getNextClipNumber_();
+  return {
+    success: true,
+    clip_nr: nextClip
+  };
+}
+
+/**
+ * Increment and return clip number
+ */
+function handleIncrementClip_(data) {
+  const nextClip = getNextClipNumber_();
+
+  // Store in settings for persistence
+  const settingsSheet = getDbSheet_(DB.SETTINGS);
+  const settingsData = settingsSheet.getDataRange().getValues();
+
+  let found = false;
+  for (let i = 1; i < settingsData.length; i++) {
+    if (settingsData[i][0] === 'clip_counter') {
+      settingsSheet.getRange(i + 1, 2).setValue(nextClip);
+      found = true;
+      break;
+    }
+  }
+
+  if (!found) {
+    settingsSheet.appendRow(['clip_counter', nextClip, 'Current clip counter']);
+  }
+
+  return {
+    success: true,
+    clip_nr: nextClip,
+    message: `Clip counter incremented to ${nextClip}`
+  };
+}
+
+/**
+ * Get next clip number from log
+ */
+function getNextClipNumber_() {
+  try {
+    const logSheet = getDbSheet_(DB.LOG);
+    const logData = logSheet.getDataRange().getValues();
+
+    let maxClip = 0;
+    for (let i = 1; i < logData.length; i++) {
+      const clipNr = parseInt(logData[i][5]) || 0;
+      if (clipNr > maxClip) maxClip = clipNr;
+    }
+
+    return maxClip + 1;
+  } catch (e) {
+    return 1;
+  }
+}
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Format post data for API response
+ */
+function formatPostForApi_(postRow) {
+  return {
+    post_id: postRow[POST_SCHEMA.ID],
+    program_nr: postRow[POST_SCHEMA.PROGRAM_NR],
+    sort_order: postRow[POST_SCHEMA.SORT_ORDER],
+    type: postRow[POST_SCHEMA.TYPE],
+    title: postRow[POST_SCHEMA.TITLE],
+    duration_sec: postRow[POST_SCHEMA.DURATION],
+    duration_formatted: formatDuration_(postRow[POST_SCHEMA.DURATION] || 0),
+    people_ids: postRow[POST_SCHEMA.PEOPLE_IDS],
+    location: postRow[POST_SCHEMA.LOCATION],
+    recording_day: postRow[POST_SCHEMA.RECORDING_DAY],
+    recording_time: postRow[POST_SCHEMA.RECORDING_TIME],
+    status: postRow[POST_SCHEMA.STATUS],
+    notes: postRow[POST_SCHEMA.NOTES]
+  };
+}
+
+/**
+ * Calculate duration between two timecodes (HH:MM:SS or HH:MM:SS:FF)
  */
 function calculateTcDuration_(tcIn, tcOut) {
-  // Parse HH:MM:SS format
   const parseTC = (tc) => {
-    const parts = tc.split(':').map(p => parseInt(p, 10));
-    return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    if (!tc) return 0;
+    const parts = String(tc).split(':').map(p => parseInt(p, 10) || 0);
+    if (parts.length >= 3) {
+      return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    }
+    return 0;
   };
-  
+
   return parseTC(tcOut) - parseTC(tcIn);
 }
