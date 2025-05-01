@@ -275,8 +275,16 @@ const TIME_FORMAT = {
  * - Any HTTP client
  *
  * Deploy: Extensions > Apps Script > Deploy > Web app
+ *
+ * SECURITY: Set API_SECRET in Script Properties:
+ * Extensions > Apps Script > Project Settings > Script Properties
+ * Add property: API_SECRET = your-secret-key-here
  */
 const API_CONFIG = {
+  // Rate limiting (requests per minute)
+  RATE_LIMIT: 60,
+  RATE_LIMIT_WINDOW_MS: 60000,
+
   // API endpoints (for reference, actual routing is in Triggers.gs)
   ENDPOINTS: {
     // POST actions

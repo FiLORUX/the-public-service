@@ -21,7 +21,14 @@ function onOpen() {
     .addItem('🔄 Generate All Views', 'generateAllViews')
     .addSeparator()
     .addItem('👁️ Show Database Sheets', 'showDbSheets')
-    .addItem('💾 Backup to JSON', 'exportDatabaseToJson')
+    .addSeparator()
+    .addSubMenu(ui.createMenu('💾 Backup & Restore')
+      .addItem('📤 Exportera till JSON', 'exportDatabaseToJson')
+      .addItem('💾 Skapa backup nu', 'runBackupNow')
+      .addItem('🔄 Återställ från backup', 'showRestoreDialog')
+      .addSeparator()
+      .addItem('⏰ Aktivera automatisk backup', 'installBackupTriggers')
+      .addItem('🚫 Avaktivera automatisk backup', 'removeBackupTriggers'))
     .addSeparator()
     .addItem('📖 Documentation', 'showDocumentation')
     .addItem('ℹ️ About', 'showAbout')
@@ -1164,8 +1171,416 @@ function saveSettingsFromDialog(data) {
 }
 
 // ============================================================================
-// EXPORT FUNCTIONS
+// BACKUP & RESTORE FUNCTIONS
 // ============================================================================
+
+/**
+ * Show dialog for restoring from backup
+ */
+function showRestoreDialog() {
+  const ui = SpreadsheetApp.getUi();
+
+  const html = HtmlService.createHtmlOutput(`
+    <style>
+      body {
+        font-family: 'Roboto', Arial, sans-serif;
+        padding: 20px;
+        font-size: 13px;
+      }
+      h2 {
+        color: #37474F;
+        margin-bottom: 10px;
+      }
+      .warning-box {
+        background: #FFCDD2;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 15px 0;
+        border-left: 4px solid #E53935;
+      }
+      .warning-box h3 {
+        margin: 0 0 8px 0;
+        color: #C62828;
+      }
+      .info-box {
+        background: #E3F2FD;
+        padding: 12px;
+        border-radius: 4px;
+        margin: 15px 0;
+        font-size: 12px;
+      }
+      label {
+        display: block;
+        margin-top: 15px;
+        font-weight: 500;
+        color: #37474F;
+      }
+      select, textarea {
+        width: 100%;
+        padding: 8px;
+        margin-top: 4px;
+        border: 1px solid #CFD8DC;
+        border-radius: 4px;
+        font-size: 13px;
+        font-family: inherit;
+        box-sizing: border-box;
+      }
+      textarea {
+        min-height: 150px;
+        font-family: monospace;
+        font-size: 11px;
+      }
+      button {
+        margin-top: 20px;
+        padding: 10px 24px;
+        background-color: #E53935;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+      }
+      button:hover {
+        background-color: #C62828;
+      }
+      .cancel-btn {
+        background-color: #9E9E9E;
+        margin-left: 8px;
+      }
+      .cancel-btn:hover {
+        background-color: #757575;
+      }
+      .result {
+        margin-top: 15px;
+        padding: 12px;
+        border-radius: 4px;
+        display: none;
+      }
+      .result.success { background: #C8E6C9; display: block; }
+      .result.error { background: #FFCDD2; display: block; }
+      .result.loading { background: #FFF9C4; display: block; }
+      .tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+      }
+      .tab {
+        padding: 8px 16px;
+        background: #ECEFF1;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .tab.active {
+        background: #2196F3;
+        color: white;
+      }
+      .tab-content { display: none; }
+      .tab-content.active { display: block; }
+    </style>
+
+    <h2>🔄 Återställ från backup</h2>
+
+    <div class="warning-box">
+      <h3>⚠️ Varning</h3>
+      Detta kommer att <strong>ERSÄTTA</strong> all befintlig data i databasen.
+      Denna åtgärd kan inte ångras!
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('drive')">📁 Från Google Drive</button>
+      <button class="tab" onclick="showTab('json')">📋 Från JSON</button>
+    </div>
+
+    <div id="drive-tab" class="tab-content active">
+      <div class="info-box">
+        Välj en backup-fil från mappen "Gudstjänst_Backups" i Google Drive.
+      </div>
+      <label>Tillgängliga backups</label>
+      <select id="backup-file">
+        <option value="">Laddar...</option>
+      </select>
+    </div>
+
+    <div id="json-tab" class="tab-content">
+      <div class="info-box">
+        Klistra in JSON-data från en tidigare export eller backup-fil.
+      </div>
+      <label>JSON-data</label>
+      <textarea id="json-data" placeholder='{"version": "1.0.0", "posts": [...], ...}'></textarea>
+    </div>
+
+    <div id="result" class="result"></div>
+
+    <button onclick="doRestore()">⚠️ Återställ data</button>
+    <button class="cancel-btn" onclick="google.script.host.close()">Avbryt</button>
+
+    <script>
+      let activeTab = 'drive';
+
+      function showTab(tab) {
+        activeTab = tab;
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        event.target.classList.add('active');
+        document.getElementById(tab + '-tab').classList.add('active');
+      }
+
+      // Load backup files on dialog open
+      google.script.run
+        .withSuccessHandler(function(files) {
+          const select = document.getElementById('backup-file');
+          if (files.length === 0) {
+            select.innerHTML = '<option value="">Inga backups hittade</option>';
+          } else {
+            select.innerHTML = '<option value="">-- Välj backup --</option>' +
+              files.map(f => '<option value="' + f.id + '">' + f.name + ' (' + f.date + ')</option>').join('');
+          }
+        })
+        .withFailureHandler(function(error) {
+          document.getElementById('backup-file').innerHTML =
+            '<option value="">Fel: ' + error.message + '</option>';
+        })
+        .getAvailableBackups();
+
+      function doRestore() {
+        const resultEl = document.getElementById('result');
+        resultEl.className = 'result loading';
+        resultEl.innerHTML = 'Återställer data...';
+
+        if (activeTab === 'drive') {
+          const fileId = document.getElementById('backup-file').value;
+          if (!fileId) {
+            resultEl.className = 'result error';
+            resultEl.innerHTML = 'Välj en backup-fil först';
+            return;
+          }
+          google.script.run
+            .withSuccessHandler(handleResult)
+            .withFailureHandler(handleError)
+            .restoreFromDriveBackup(fileId);
+        } else {
+          const json = document.getElementById('json-data').value.trim();
+          if (!json) {
+            resultEl.className = 'result error';
+            resultEl.innerHTML = 'Klistra in JSON-data först';
+            return;
+          }
+          google.script.run
+            .withSuccessHandler(handleResult)
+            .withFailureHandler(handleError)
+            .restoreFromJsonBackup(json);
+        }
+      }
+
+      function handleResult(result) {
+        const resultEl = document.getElementById('result');
+        if (result.success) {
+          resultEl.className = 'result success';
+          resultEl.innerHTML = result.message;
+          setTimeout(() => google.script.host.close(), 3000);
+        } else {
+          resultEl.className = 'result error';
+          resultEl.innerHTML = 'Fel: ' + result.error;
+        }
+      }
+
+      function handleError(error) {
+        const resultEl = document.getElementById('result');
+        resultEl.className = 'result error';
+        resultEl.innerHTML = 'Fel: ' + error.message;
+      }
+    </script>
+  `)
+    .setWidth(550)
+    .setHeight(600);
+
+  ui.showModalDialog(html, 'Återställ från backup');
+}
+
+/**
+ * Get list of available backup files from Google Drive
+ */
+function getAvailableBackups() {
+  try {
+    // Get backup folder
+    const settingsSheet = getDbSheet_(DB.SETTINGS);
+    const settingsData = settingsSheet.getDataRange().getValues();
+    let folderId = null;
+
+    for (let i = 1; i < settingsData.length; i++) {
+      if (settingsData[i][0] === 'backup_folder_id') {
+        folderId = settingsData[i][1];
+        break;
+      }
+    }
+
+    if (!folderId) {
+      return [];
+    }
+
+    const folder = DriveApp.getFolderById(folderId);
+    const files = folder.getFilesByType(MimeType.PLAIN_TEXT);
+    const backups = [];
+
+    while (files.hasNext()) {
+      const file = files.next();
+      if (file.getName().startsWith('gudstjanst_backup_')) {
+        backups.push({
+          id: file.getId(),
+          name: file.getName(),
+          date: file.getDateCreated().toLocaleString('sv-SE')
+        });
+      }
+    }
+
+    // Sort by date (newest first)
+    backups.sort((a, b) => b.date.localeCompare(a.date));
+
+    return backups;
+
+  } catch (error) {
+    Logger.log(`Error getting backups: ${error.message}`);
+    return [];
+  }
+}
+
+/**
+ * Restore database from Google Drive backup file
+ */
+function restoreFromDriveBackup(fileId) {
+  try {
+    const file = DriveApp.getFileById(fileId);
+    const json = file.getBlob().getDataAsString();
+
+    return restoreFromJsonBackup(json);
+
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Restore database from JSON string
+ */
+function restoreFromJsonBackup(jsonString) {
+  const ui = SpreadsheetApp.getUi();
+
+  try {
+    const data = JSON.parse(jsonString);
+
+    // Validate required fields
+    if (!data.posts || !data.people || !data.programs) {
+      return { success: false, error: 'Ogiltig backup-fil: saknar posts, people eller programs' };
+    }
+
+    // Create pre-restore backup
+    Logger.log('Creating pre-restore backup...');
+    const preBackupResult = dailyBackup();
+    if (!preBackupResult.success) {
+      Logger.log('Warning: Could not create pre-restore backup');
+    }
+
+    // Restore each table
+    let restored = {
+      posts: 0,
+      people: 0,
+      programs: 0,
+      post_types: 0,
+      log: 0,
+      settings: 0
+    };
+
+    // Restore posts
+    if (data.posts && data.posts.length > 1) {
+      const sheet = getDbSheet_(DB.POSTS);
+      sheet.clear();
+      sheet.getRange(1, 1, data.posts.length, data.posts[0].length).setValues(data.posts);
+      restored.posts = data.posts.length - 1; // Minus header
+    }
+
+    // Restore people
+    if (data.people && data.people.length > 1) {
+      const sheet = getDbSheet_(DB.PEOPLE);
+      sheet.clear();
+      sheet.getRange(1, 1, data.people.length, data.people[0].length).setValues(data.people);
+      restored.people = data.people.length - 1;
+    }
+
+    // Restore programs
+    if (data.programs && data.programs.length > 1) {
+      const sheet = getDbSheet_(DB.PROGRAMS);
+      sheet.clear();
+      sheet.getRange(1, 1, data.programs.length, data.programs[0].length).setValues(data.programs);
+      restored.programs = data.programs.length - 1;
+    }
+
+    // Restore post types
+    if (data.post_types && data.post_types.length > 1) {
+      const sheet = getDbSheet_(DB.POST_TYPES);
+      sheet.clear();
+      sheet.getRange(1, 1, data.post_types.length, data.post_types[0].length).setValues(data.post_types);
+      restored.post_types = data.post_types.length - 1;
+    }
+
+    // Restore log
+    if (data.log && data.log.length > 1) {
+      const sheet = getDbSheet_(DB.LOG);
+      sheet.clear();
+      sheet.getRange(1, 1, data.log.length, data.log[0].length).setValues(data.log);
+      restored.log = data.log.length - 1;
+    }
+
+    // Restore settings (but preserve some system settings)
+    if (data.settings && data.settings.length > 1) {
+      const sheet = getDbSheet_(DB.SETTINGS);
+      const currentSettings = sheet.getDataRange().getValues();
+
+      // Preserve backup_folder_id
+      let backupFolderId = null;
+      for (let i = 1; i < currentSettings.length; i++) {
+        if (currentSettings[i][0] === 'backup_folder_id') {
+          backupFolderId = currentSettings[i][1];
+          break;
+        }
+      }
+
+      sheet.clear();
+      sheet.getRange(1, 1, data.settings.length, data.settings[0].length).setValues(data.settings);
+
+      // Re-add backup folder ID
+      if (backupFolderId) {
+        sheet.appendRow(['backup_folder_id', backupFolderId, 'Google Drive folder for automatic backups']);
+      }
+
+      restored.settings = data.settings.length - 1;
+    }
+
+    // Add restore timestamp
+    const settingsSheet = getDbSheet_(DB.SETTINGS);
+    settingsSheet.appendRow(['last_restore', getTimestamp_(), 'Last restore from backup']);
+
+    Logger.log(`Restore complete: ${JSON.stringify(restored)}`);
+
+    const message = `Återställning klar!
+
+Återställt:
+• ${restored.posts} poster
+• ${restored.people} personer
+• ${restored.programs} program
+• ${restored.post_types} posttyper
+• ${restored.log} logg-rader
+
+En säkerhetskopia skapades innan återställningen.`;
+
+    return { success: true, message: message, restored: restored };
+
+  } catch (error) {
+    Logger.log(`Restore error: ${error.message}\n${error.stack}`);
+    return { success: false, error: error.message };
+  }
+}
 
 /**
  * Export database to JSON (for backup/GitHub)

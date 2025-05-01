@@ -224,25 +224,293 @@ function onChangeTrigger(e) {
 // ============================================================================
 
 /**
- * Daily backup (example of time-based trigger)
- * Uncomment and install if you want automatic daily backups
+ * Automated backup - saves database to Google Drive
+ * Runs automatically when time-based triggers are installed
  */
 function dailyBackup() {
-  // This could export to Google Drive, email, etc.
-  Logger.log('Daily backup triggered at ' + new Date());
-  // exportDatabaseToJson();
+  Logger.log('Automated backup triggered at ' + new Date());
+
+  try {
+    // Gather all database data
+    const dbData = {
+      version: SYSTEM_VERSION,
+      exported: getTimestamp_(),
+      backup_type: 'automatic',
+      posts: getDbSheet_(DB.POSTS).getDataRange().getValues(),
+      people: getDbSheet_(DB.PEOPLE).getDataRange().getValues(),
+      programs: getDbSheet_(DB.PROGRAMS).getDataRange().getValues(),
+      post_types: getDbSheet_(DB.POST_TYPES).getDataRange().getValues(),
+      log: getDbSheet_(DB.LOG).getDataRange().getValues(),
+      settings: getDbSheet_(DB.SETTINGS).getDataRange().getValues()
+    };
+
+    const json = JSON.stringify(dbData, null, 2);
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+    const filename = `gudstjanst_backup_${timestamp}.json`;
+
+    // Get or create backup folder in Google Drive
+    const folderId = getOrCreateBackupFolder_();
+    const folder = DriveApp.getFolderById(folderId);
+
+    // Create backup file
+    const file = folder.createFile(filename, json, MimeType.PLAIN_TEXT);
+
+    // Clean up old backups (keep last 30)
+    cleanupOldBackups_(folder, 30);
+
+    Logger.log(`Backup created: ${filename} (${file.getId()})`);
+
+    // Update settings with last backup time
+    updateBackupTimestamp_();
+
+    return { success: true, filename: filename, fileId: file.getId() };
+
+  } catch (error) {
+    Logger.log(`Backup error: ${error.message}\n${error.stack}`);
+    return { success: false, error: error.message };
+  }
 }
 
 /**
- * Install time-based triggers (run manually if needed)
+ * Get or create backup folder in Google Drive
+ */
+function getOrCreateBackupFolder_() {
+  const folderName = 'Gudstjänst_Backups';
+
+  // Check if folder ID is stored in settings
+  const settingsSheet = getDbSheet_(DB.SETTINGS);
+  const settingsData = settingsSheet.getDataRange().getValues();
+
+  for (let i = 1; i < settingsData.length; i++) {
+    if (settingsData[i][0] === 'backup_folder_id') {
+      const folderId = settingsData[i][1];
+      // Verify folder still exists
+      try {
+        DriveApp.getFolderById(folderId);
+        return folderId;
+      } catch (e) {
+        // Folder doesn't exist, create new one
+      }
+    }
+  }
+
+  // Create new folder
+  const folder = DriveApp.createFolder(folderName);
+  const folderId = folder.getId();
+
+  // Store folder ID in settings
+  settingsSheet.appendRow(['backup_folder_id', folderId, 'Google Drive folder for automatic backups']);
+
+  Logger.log(`Created backup folder: ${folderName} (${folderId})`);
+  return folderId;
+}
+
+/**
+ * Clean up old backup files, keeping the most recent N
+ */
+function cleanupOldBackups_(folder, keepCount) {
+  const files = folder.getFilesByType(MimeType.PLAIN_TEXT);
+  const fileList = [];
+
+  while (files.hasNext()) {
+    const file = files.next();
+    if (file.getName().startsWith('gudstjanst_backup_')) {
+      fileList.push({
+        file: file,
+        created: file.getDateCreated()
+      });
+    }
+  }
+
+  // Sort by date (newest first)
+  fileList.sort((a, b) => b.created - a.created);
+
+  // Delete files beyond keepCount
+  for (let i = keepCount; i < fileList.length; i++) {
+    Logger.log(`Deleting old backup: ${fileList[i].file.getName()}`);
+    fileList[i].file.setTrashed(true);
+  }
+}
+
+/**
+ * Update last backup timestamp in settings
+ */
+function updateBackupTimestamp_() {
+  const sheet = getDbSheet_(DB.SETTINGS);
+  const data = sheet.getDataRange().getValues();
+
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === 'last_backup') {
+      sheet.getRange(i + 1, 2).setValue(getTimestamp_());
+      return;
+    }
+  }
+
+  // Add setting if not exists
+  sheet.appendRow(['last_backup', getTimestamp_(), 'Last automatic backup timestamp']);
+}
+
+/**
+ * Install time-based triggers for automatic backups
+ * Run this once to enable automatic backups (3 times per day)
+ */
+function installBackupTriggers() {
+  const ui = SpreadsheetApp.getUi();
+
+  // Remove existing backup triggers
+  const triggers = ScriptApp.getProjectTriggers();
+  triggers.forEach(trigger => {
+    if (trigger.getHandlerFunction() === 'dailyBackup') {
+      ScriptApp.deleteTrigger(trigger);
+    }
+  });
+
+  // Create new triggers: 3 AM, 11 AM, 7 PM
+  ScriptApp.newTrigger('dailyBackup')
+    .timeBased()
+    .atHour(3)
+    .everyDays(1)
+    .create();
+
+  ScriptApp.newTrigger('dailyBackup')
+    .timeBased()
+    .atHour(11)
+    .everyDays(1)
+    .create();
+
+  ScriptApp.newTrigger('dailyBackup')
+    .timeBased()
+    .atHour(19)
+    .everyDays(1)
+    .create();
+
+  Logger.log('Backup triggers installed: 03:00, 11:00, 19:00');
+  ui.alert('Backup-triggers installerade', 'Automatisk backup körs nu 3 gånger per dag:\n• 03:00\n• 11:00\n• 19:00\n\nBackup-filer sparas i Google Drive-mappen "Gudstjänst_Backups".', ui.ButtonSet.OK);
+}
+
+/**
+ * Remove all backup triggers
+ */
+function removeBackupTriggers() {
+  const triggers = ScriptApp.getProjectTriggers();
+  let removed = 0;
+
+  triggers.forEach(trigger => {
+    if (trigger.getHandlerFunction() === 'dailyBackup') {
+      ScriptApp.deleteTrigger(trigger);
+      removed++;
+    }
+  });
+
+  const ui = SpreadsheetApp.getUi();
+  ui.alert('Backup-triggers borttagna', `${removed} backup-trigger(s) har tagits bort.\n\nAutomatisk backup är nu inaktiverad.`, ui.ButtonSet.OK);
+}
+
+/**
+ * Run manual backup now
+ */
+function runBackupNow() {
+  const ui = SpreadsheetApp.getUi();
+
+  const confirm = ui.alert(
+    'Skapa backup nu?',
+    'Detta skapar en backup av hela databasen till Google Drive.',
+    ui.ButtonSet.YES_NO
+  );
+
+  if (confirm !== ui.Button.YES) {
+    return;
+  }
+
+  const result = dailyBackup();
+
+  if (result.success) {
+    ui.alert('Backup klar!', `Backup skapad: ${result.filename}\n\nFilen finns i Google Drive-mappen "Gudstjänst_Backups".`, ui.ButtonSet.OK);
+  } else {
+    ui.alert('Backup misslyckades', `Fel: ${result.error}`, ui.ButtonSet.OK);
+  }
+}
+
+/**
+ * Legacy function - kept for backwards compatibility
  */
 function installTimeTriggers() {
-  // Example: daily backup at 3 AM
-  // ScriptApp.newTrigger('dailyBackup')
-  //   .timeBased()
-  //   .atHour(3)
-  //   .everyDays(1)
-  //   .create();
+  installBackupTriggers();
+}
+
+// ============================================================================
+// API SECURITY & RATE LIMITING
+// ============================================================================
+
+/**
+ * Get API secret from Script Properties
+ * Set via: Extensions > Apps Script > Project Settings > Script Properties
+ */
+function getApiSecret_() {
+  return PropertiesService.getScriptProperties().getProperty('API_SECRET');
+}
+
+/**
+ * Validate API authentication
+ * Checks for api_key in query params, POST body, or X-API-Key header
+ */
+function validateApiAuth_(e, data) {
+  const secret = getApiSecret_();
+
+  // If no secret is set, allow all requests (for backwards compatibility)
+  if (!secret) {
+    return { valid: true, warning: 'API_SECRET not configured - API is unprotected' };
+  }
+
+  // Check various places for the API key
+  const providedKey =
+    e.parameter?.api_key ||           // Query param
+    data?.api_key ||                  // POST body
+    e.parameter?.key ||               // Alternative query param
+    null;
+
+  if (!providedKey) {
+    return { valid: false, error: 'API key required. Provide api_key parameter.' };
+  }
+
+  if (providedKey !== secret) {
+    return { valid: false, error: 'Invalid API key' };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Rate limiting using Cache Service
+ * Returns true if request is allowed, false if rate limited
+ */
+function checkRateLimit_(identifier) {
+  const cache = CacheService.getScriptCache();
+  const key = `rate_limit_${identifier}`;
+
+  const current = cache.get(key);
+  const count = current ? parseInt(current, 10) : 0;
+
+  if (count >= API_CONFIG.RATE_LIMIT) {
+    return { allowed: false, remaining: 0, resetIn: 60 };
+  }
+
+  // Increment counter (expires after 60 seconds)
+  cache.put(key, String(count + 1), 60);
+
+  return {
+    allowed: true,
+    remaining: API_CONFIG.RATE_LIMIT - count - 1,
+    count: count + 1
+  };
+}
+
+/**
+ * Get client identifier for rate limiting
+ */
+function getClientIdentifier_(e) {
+  // Use a combination of available identifiers
+  return e.parameter?.client_id || 'anonymous';
 }
 
 // ============================================================================
@@ -252,6 +520,10 @@ function installTimeTriggers() {
 /**
  * Handle incoming POST requests from external systems
  * Deploy as: Web App > Execute as: Me > Access: Anyone
+ *
+ * SECURITY:
+ * - Set API_SECRET in Script Properties for authentication
+ * - Rate limited to 60 requests/minute per client
  *
  * Supported actions:
  * - tc_in: Log timecode IN for a post
@@ -271,6 +543,27 @@ function doPost(e) {
 
   try {
     const data = JSON.parse(e.postData.contents);
+
+    // Check rate limiting
+    const clientId = getClientIdentifier_(e);
+    const rateCheck = checkRateLimit_(clientId);
+    if (!rateCheck.allowed) {
+      return output.setContent(JSON.stringify({
+        success: false,
+        error: 'Rate limit exceeded. Maximum 60 requests per minute.',
+        retry_after_seconds: rateCheck.resetIn
+      }));
+    }
+
+    // Validate authentication
+    const auth = validateApiAuth_(e, data);
+    if (!auth.valid) {
+      return output.setContent(JSON.stringify({
+        success: false,
+        error: auth.error
+      }));
+    }
+
     const action = data.action;
 
     // Log incoming request
@@ -365,6 +658,28 @@ function doGet(e) {
   try {
     const params = e.parameter || {};
     const action = params.action || 'status';
+
+    // Check rate limiting
+    const clientId = getClientIdentifier_(e);
+    const rateCheck = checkRateLimit_(clientId);
+    if (!rateCheck.allowed) {
+      return output.setContent(JSON.stringify({
+        success: false,
+        error: 'Rate limit exceeded. Maximum 60 requests per minute.',
+        retry_after_seconds: rateCheck.resetIn
+      }));
+    }
+
+    // Validate authentication (except for status endpoint)
+    if (action !== 'status') {
+      const auth = validateApiAuth_(e, {});
+      if (!auth.valid) {
+        return output.setContent(JSON.stringify({
+          success: false,
+          error: auth.error
+        }));
+      }
+    }
 
     Logger.log(`API GET: action=${action}, params=${JSON.stringify(params)}`);
 

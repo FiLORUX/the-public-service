@@ -13,7 +13,21 @@
 5. Click **Deploy**
 6. Copy the **Web app URL** (looks like `https://script.google.com/macros/s/XXXXX/exec`)
 
-### 2. Test the deployment
+### 2. Configure API Security (Recommended)
+
+**IMPORTANT:** For production use, configure API authentication:
+
+1. In Apps Script editor, go to **Project Settings** (gear icon)
+2. Scroll down to **Script Properties**
+3. Click **Add script property**
+4. Add:
+   - Property: `API_SECRET`
+   - Value: A strong random string (e.g., `sk_live_abc123xyz789...`)
+5. Click **Save**
+
+Once configured, all API requests (except `?action=status`) require authentication.
+
+### 3. Test the deployment
 
 ```bash
 curl "https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec?action=status"
@@ -41,37 +55,41 @@ Expected response:
 
 All GET requests use query parameters.
 
-| Action | Description | Parameters |
-|--------|-------------|------------|
-| `status` | System status and available endpoints | - |
-| `posts` | Get all posts for a program | `program` (1-4) |
-| `schedule` | Get recording schedule | `day` (dag1/dag2/dag3, optional) |
-| `post` | Get specific post | `post_id` |
-| `current` | Get currently recording post | - |
-| `clip_counter` | Get next clip number | - |
+**Authentication:** Add `api_key=YOUR_SECRET` to query params (except for `status`).
+
+| Action | Description | Parameters | Auth Required |
+|--------|-------------|------------|---------------|
+| `status` | System status and available endpoints | - | No |
+| `posts` | Get all posts for a program | `program` (1-4) | Yes |
+| `schedule` | Get recording schedule | `day` (dag1/dag2/dag3, optional) | Yes |
+| `post` | Get specific post | `post_id` | Yes |
+| `current` | Get currently recording post | - | Yes |
+| `clip_counter` | Get next clip number | - | Yes |
 
 **Examples:**
 
 ```bash
-# Get system status
+# Get system status (no auth required)
 curl "https://YOUR_URL/exec?action=status"
 
-# Get all posts for Program 1
-curl "https://YOUR_URL/exec?action=posts&program=1"
+# Get all posts for Program 1 (with auth)
+curl "https://YOUR_URL/exec?action=posts&program=1&api_key=YOUR_SECRET"
 
-# Get schedule for Day 1
-curl "https://YOUR_URL/exec?action=schedule&day=dag1"
+# Get schedule for Day 1 (with auth)
+curl "https://YOUR_URL/exec?action=schedule&day=dag1&api_key=YOUR_SECRET"
 
-# Get specific post
-curl "https://YOUR_URL/exec?action=post&post_id=P1:5"
+# Get specific post (with auth)
+curl "https://YOUR_URL/exec?action=post&post_id=P1:5&api_key=YOUR_SECRET"
 
-# Get currently recording post
-curl "https://YOUR_URL/exec?action=current"
+# Get currently recording post (with auth)
+curl "https://YOUR_URL/exec?action=current&api_key=YOUR_SECRET"
 ```
 
 ### POST Endpoints
 
 All POST requests use JSON body with `action` field.
+
+**Authentication:** Include `api_key` in the JSON body.
 
 | Action | Description | Required Fields |
 |--------|-------------|-----------------|
@@ -89,20 +107,20 @@ All POST requests use JSON body with `action` field.
 **Examples:**
 
 ```bash
-# Log TC-IN for a post
+# Log TC-IN for a post (with auth)
 curl -X POST "https://YOUR_URL/exec" \
   -H "Content-Type: application/json" \
-  -d '{"action": "tc_in", "post_id": "P1:5", "tc_in": "01:23:45:00"}'
+  -d '{"action": "tc_in", "post_id": "P1:5", "tc_in": "01:23:45:00", "api_key": "YOUR_SECRET"}'
 
-# Mark post as recorded
+# Mark post as recorded (with auth)
 curl -X POST "https://YOUR_URL/exec" \
   -H "Content-Type: application/json" \
-  -d '{"action": "mark_recorded", "post_id": "P1:5"}'
+  -d '{"action": "mark_recorded", "post_id": "P1:5", "api_key": "YOUR_SECRET"}'
 
-# Get next post to record
+# Get next post to record (with auth)
 curl -X POST "https://YOUR_URL/exec" \
   -H "Content-Type: application/json" \
-  -d '{"action": "get_next", "program_nr": 1, "recording_day": "dag1"}'
+  -d '{"action": "get_next", "program_nr": 1, "recording_day": "dag1", "api_key": "YOUR_SECRET"}'
 ```
 
 ---
@@ -128,7 +146,8 @@ Body:
   "action": "tc_in",
   "post_id": "$(internal:custom_current_post)",
   "tc_in": "$(vmix:timecode)",
-  "operator": "Companion"
+  "operator": "Companion",
+  "api_key": "YOUR_SECRET"
 }
 ```
 
@@ -143,7 +162,8 @@ Body:
 {
   "action": "tc_out",
   "post_id": "$(internal:custom_current_post)",
-  "tc_out": "$(vmix:timecode)"
+  "tc_out": "$(vmix:timecode)",
+  "api_key": "YOUR_SECRET"
 }
 ```
 
@@ -152,7 +172,8 @@ Body:
 ```json
 {
   "action": "mark_recorded",
-  "post_id": "$(internal:custom_current_post)"
+  "post_id": "$(internal:custom_current_post)",
+  "api_key": "YOUR_SECRET"
 }
 ```
 
@@ -161,7 +182,8 @@ Body:
 ```json
 {
   "action": "mark_approved",
-  "post_id": "$(internal:custom_current_post)"
+  "post_id": "$(internal:custom_current_post)",
+  "api_key": "YOUR_SECRET"
 }
 ```
 
@@ -171,7 +193,8 @@ Body:
 {
   "action": "get_next",
   "program_nr": 1,
-  "recording_day": "dag1"
+  "recording_day": "dag1",
+  "api_key": "YOUR_SECRET"
 }
 ```
 
@@ -181,6 +204,7 @@ Set up custom variables in Companion:
 - `current_post`: Currently selected post ID (e.g., "P1:5")
 - `current_program`: Current program number (1-4)
 - `recording_day`: Current recording day (dag1/dag2/dag3)
+- `api_key`: Your API secret (store securely!)
 
 ---
 
@@ -328,6 +352,23 @@ All responses are JSON with this structure:
 
 ## Rate Limits
 
+### API Rate Limiting (Built-in)
+
+The API has built-in rate limiting:
+- **60 requests per minute** per client
+- Identified by `client_id` parameter (optional)
+- Returns `429 Too Many Requests` equivalent when exceeded
+
+```json
+{
+  "success": false,
+  "error": "Rate limit exceeded. Maximum 60 requests per minute.",
+  "retry_after_seconds": 60
+}
+```
+
+### Google Apps Script Limits
+
 Google Apps Script has execution limits:
 - **Trigger executions:** 90 min/day (consumer), 6 hr/day (Workspace)
 - **URL Fetch calls:** 20,000/day
@@ -338,6 +379,19 @@ For high-volume use, consider batching requests or using Google Cloud Functions.
 ---
 
 ## Troubleshooting
+
+### "API key required" error
+You need to include your API key in requests. Either:
+- Add `api_key=YOUR_SECRET` to query parameters (GET)
+- Add `"api_key": "YOUR_SECRET"` to JSON body (POST)
+
+If you haven't set up API_SECRET, the API will be unprotected (not recommended for production).
+
+### "Invalid API key" error
+The provided API key doesn't match the one configured in Script Properties. Double-check your API_SECRET value.
+
+### "Rate limit exceeded" error
+You've exceeded 60 requests per minute. Wait 60 seconds and try again. For high-frequency use, batch requests or use `client_id` parameter to identify different clients.
 
 ### "API not enabled" error
 The old API_CONFIG.ENABLED check has been removed. If you see this, you may have an old version of the code.
