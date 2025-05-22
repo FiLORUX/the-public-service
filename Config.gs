@@ -29,7 +29,8 @@ const DB = {
   PROGRAMS: '_DB_Program',      // Program metadata (4 programs per location)
   POST_TYPES: '_DB_PostTyper',  // Templates for post types (predikan, sång, etc)
   LOG: '_DB_Logg',              // Timecode logging (append-only)
-  SETTINGS: '_DB_Settings'      // System settings
+  SETTINGS: '_DB_Settings',     // System settings
+  AUDIT: '_DB_Audit'            // Audit log (who did what when)
 };
 
 // ============================================================================

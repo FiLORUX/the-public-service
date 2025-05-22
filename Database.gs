@@ -41,10 +41,18 @@ function bootstrapDatabase() {
     createDbPostTypesSheet_();
     createDbLogSheet_();
     createDbSettingsSheet_();
-    
+    createDbAuditSheet_();
+
     // Seed initial data
     seedPostTypes_();
     seedPrograms_();
+
+    // Log bootstrap to audit
+    logAudit_({
+      action: 'bootstrap',
+      entity_type: 'system',
+      source: 'ui'
+    });
     
     // Hide database sheets
     hideDbSheets_();
@@ -280,6 +288,91 @@ function createDbSettingsSheet_() {
   Logger.log('Created _DB_Settings sheet');
 }
 
+/**
+ * Create _DB_Audit sheet (audit log for tracking changes)
+ */
+function createDbAuditSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(DB.AUDIT);
+
+  if (sheet) {
+    sheet.clear();
+  } else {
+    sheet = ss.insertSheet(DB.AUDIT);
+  }
+
+  const headers = [
+    'timestamp',      // When the action occurred
+    'user',           // Who performed the action (email if available)
+    'action',         // create, update, delete, restore, etc.
+    'entity_type',    // post, person, program, settings
+    'entity_id',      // ID of the affected entity
+    'field',          // Which field was changed (for updates)
+    'old_value',      // Previous value
+    'new_value',      // New value
+    'source'          // ui, api, trigger, import
+  ];
+
+  // Set headers
+  const headerRange = sheet.getRange(1, 1, 1, headers.length);
+  headerRange.setValues([headers]);
+  headerRange.setBackground(COLOURS.HEADER_BG);
+  headerRange.setFontColor(COLOURS.HEADER_TEXT);
+  headerRange.setFontWeight('bold');
+
+  sheet.setFrozenRows(1);
+
+  // Set column widths
+  sheet.setColumnWidth(1, 160);  // timestamp
+  sheet.setColumnWidth(2, 200);  // user
+  sheet.setColumnWidth(3, 100);  // action
+  sheet.setColumnWidth(4, 100);  // entity_type
+  sheet.setColumnWidth(5, 100);  // entity_id
+  sheet.setColumnWidth(6, 120);  // field
+  sheet.setColumnWidth(7, 200);  // old_value
+  sheet.setColumnWidth(8, 200);  // new_value
+  sheet.setColumnWidth(9, 80);   // source
+
+  Logger.log('Created _DB_Audit sheet');
+}
+
+/**
+ * Log an action to the audit trail
+ * @param {Object} auditData - Audit entry data
+ */
+function logAudit_(auditData) {
+  try {
+    const sheet = getDbSheet_(DB.AUDIT);
+
+    // Get current user if possible
+    let user = 'system';
+    try {
+      const email = Session.getActiveUser().getEmail();
+      if (email) user = email;
+    } catch (e) {
+      // Session may not be available in triggers
+    }
+
+    const row = [
+      getTimestamp_(),
+      auditData.user || user,
+      auditData.action || 'unknown',
+      auditData.entity_type || '',
+      auditData.entity_id || '',
+      auditData.field || '',
+      String(auditData.old_value || '').substring(0, 500),  // Truncate long values
+      String(auditData.new_value || '').substring(0, 500),
+      auditData.source || 'unknown'
+    ];
+
+    sheet.appendRow(row);
+
+  } catch (error) {
+    // Don't let audit logging errors break the main operation
+    Logger.log(`Audit log error: ${error.message}`);
+  }
+}
+
 // ============================================================================
 // SEED DATA
 // ============================================================================
@@ -386,7 +479,16 @@ function createPost(postData) {
   
   // Append to sheet
   sheet.appendRow(row);
-  
+
+  // Audit log
+  logAudit_({
+    action: 'create',
+    entity_type: 'post',
+    entity_id: postId,
+    new_value: postData.title || '',
+    source: postData._source || 'ui'
+  });
+
   Logger.log(`Created post: ${postId}`);
   return postId;
 }
@@ -429,11 +531,12 @@ function getAllPostsForProgram_(programNr) {
  * Update post by ID
  * @param {String} postId - Post ID
  * @param {Object} updates - Object with fields to update
+ * @param {String} source - Source of update (ui, api, trigger)
  */
-function updatePost(postId, updates) {
+function updatePost(postId, updates, source) {
   const sheet = getDbSheet_(DB.POSTS);
   const data = sheet.getDataRange().getValues();
-  
+
   // Find row with matching post_id
   let rowIndex = -1;
   for (let i = 1; i < data.length; i++) {  // Skip header
@@ -442,27 +545,50 @@ function updatePost(postId, updates) {
       break;
     }
   }
-  
+
   if (rowIndex === -1) {
     throw new Error(`Post ${postId} not found`);
   }
-  
-  // Update specified fields
-  const row = data[rowIndex - 1];  // Get existing row data
-  
+
+  // Get existing row data for audit logging
+  const oldRow = [...data[rowIndex - 1]];
+  const row = data[rowIndex - 1];
+
+  // Track changes for audit
+  const changes = [];
+
   Object.keys(updates).forEach(key => {
+    if (key.startsWith('_')) return;  // Skip internal fields like _source
     const schemaIndex = POST_SCHEMA[key.toUpperCase()];
     if (schemaIndex !== undefined) {
-      row[schemaIndex] = updates[key];
+      const oldValue = row[schemaIndex];
+      const newValue = updates[key];
+      if (oldValue !== newValue) {
+        changes.push({ field: key, oldValue, newValue });
+      }
+      row[schemaIndex] = newValue;
     }
   });
-  
+
   // Update modified timestamp
   row[POST_SCHEMA.MODIFIED] = getTimestamp_();
-  
+
   // Write back to sheet
   sheet.getRange(rowIndex, 1, 1, row.length).setValues([row]);
-  
+
+  // Audit log for each changed field
+  changes.forEach(change => {
+    logAudit_({
+      action: 'update',
+      entity_type: 'post',
+      entity_id: postId,
+      field: change.field,
+      old_value: change.oldValue,
+      new_value: change.newValue,
+      source: source || updates._source || 'ui'
+    });
+  });
+
   Logger.log(`Updated post: ${postId}`);
 }
 
@@ -528,27 +654,195 @@ function renumberAllPosts() {
 }
 
 /**
- * Delete post by ID
+ * Delete post by ID (soft-delete: moves to trash sheet)
+ * @param {String} postId - Post ID to delete
+ * @param {Boolean} hardDelete - If true, permanently deletes (default: false)
  */
-function deletePost(postId) {
+function deletePost(postId, hardDelete) {
   const sheet = getDbSheet_(DB.POSTS);
   const data = sheet.getDataRange().getValues();
-  
+
   // Find row
   let rowIndex = -1;
+  let postData = null;
   for (let i = 1; i < data.length; i++) {
     if (data[i][POST_SCHEMA.ID] === postId) {
       rowIndex = i + 1;
+      postData = data[i];
       break;
     }
   }
-  
+
   if (rowIndex === -1) {
     throw new Error(`Post ${postId} not found`);
   }
-  
+
+  // Soft delete: archive to trash before deletion
+  if (!hardDelete) {
+    archiveDeletedPost_(postData);
+  }
+
+  // Audit log
+  logAudit_({
+    action: hardDelete ? 'hard_delete' : 'delete',
+    entity_type: 'post',
+    entity_id: postId,
+    old_value: postData[POST_SCHEMA.TITLE],
+    source: 'ui'
+  });
+
   sheet.deleteRow(rowIndex);
-  Logger.log(`Deleted post: ${postId}`);
+  Logger.log(`Deleted post: ${postId} (hard=${!!hardDelete})`);
+}
+
+/**
+ * Archive deleted post to trash sheet for potential recovery
+ */
+function archiveDeletedPost_(postData) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let trashSheet = ss.getSheetByName('_DB_Trash');
+
+  // Create trash sheet if it doesn't exist
+  if (!trashSheet) {
+    trashSheet = ss.insertSheet('_DB_Trash');
+
+    // Set headers (same as posts + deleted_at + deleted_by)
+    const headers = [...POST_HEADERS, 'deleted_at', 'deleted_by'];
+    const headerRange = trashSheet.getRange(1, 1, 1, headers.length);
+    headerRange.setValues([headers]);
+    headerRange.setBackground(COLOURS.HEADER_BG);
+    headerRange.setFontColor(COLOURS.HEADER_TEXT);
+    headerRange.setFontWeight('bold');
+    trashSheet.setFrozenRows(1);
+    trashSheet.hideSheet();
+  }
+
+  // Get current user
+  let deletedBy = 'system';
+  try {
+    const email = Session.getActiveUser().getEmail();
+    if (email) deletedBy = email;
+  } catch (e) {}
+
+  // Append post to trash with deletion metadata
+  const trashRow = [...postData, getTimestamp_(), deletedBy];
+  trashSheet.appendRow(trashRow);
+
+  Logger.log(`Archived post ${postData[POST_SCHEMA.ID]} to trash`);
+}
+
+/**
+ * Restore a deleted post from trash
+ * @param {String} postId - Post ID to restore
+ */
+function restoreDeletedPost(postId) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const trashSheet = ss.getSheetByName('_DB_Trash');
+
+  if (!trashSheet) {
+    throw new Error('Ingen papperskorg hittades');
+  }
+
+  const trashData = trashSheet.getDataRange().getValues();
+  let rowIndex = -1;
+  let postData = null;
+
+  for (let i = 1; i < trashData.length; i++) {
+    if (trashData[i][POST_SCHEMA.ID] === postId) {
+      rowIndex = i + 1;
+      postData = trashData[i].slice(0, POST_HEADERS.length);  // Remove deleted_at, deleted_by
+      break;
+    }
+  }
+
+  if (rowIndex === -1) {
+    throw new Error(`Post ${postId} hittades inte i papperskorgen`);
+  }
+
+  // Restore to main posts sheet
+  const postsSheet = getDbSheet_(DB.POSTS);
+
+  // Update timestamps
+  postData[POST_SCHEMA.MODIFIED] = getTimestamp_();
+
+  postsSheet.appendRow(postData);
+
+  // Remove from trash
+  trashSheet.deleteRow(rowIndex);
+
+  // Audit log
+  logAudit_({
+    action: 'restore',
+    entity_type: 'post',
+    entity_id: postId,
+    new_value: postData[POST_SCHEMA.TITLE],
+    source: 'ui'
+  });
+
+  Logger.log(`Restored post ${postId} from trash`);
+  return postId;
+}
+
+/**
+ * Get all deleted posts from trash
+ */
+function getDeletedPosts_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const trashSheet = ss.getSheetByName('_DB_Trash');
+
+  if (!trashSheet) {
+    return [];
+  }
+
+  const data = trashSheet.getDataRange().getValues();
+  return data.slice(1).map(row => ({
+    post_id: row[POST_SCHEMA.ID],
+    program_nr: row[POST_SCHEMA.PROGRAM_NR],
+    title: row[POST_SCHEMA.TITLE],
+    type: row[POST_SCHEMA.TYPE],
+    deleted_at: row[POST_HEADERS.length],
+    deleted_by: row[POST_HEADERS.length + 1]
+  }));
+}
+
+/**
+ * Empty trash (permanently delete all trashed posts)
+ */
+function emptyTrash() {
+  const ui = SpreadsheetApp.getUi();
+
+  const confirm = ui.alert(
+    'Töm papperskorgen?',
+    'Detta kommer att PERMANENT radera alla poster i papperskorgen.\n\nDetta kan inte ångras!',
+    ui.ButtonSet.YES_NO
+  );
+
+  if (confirm !== ui.Button.YES) {
+    return;
+  }
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const trashSheet = ss.getSheetByName('_DB_Trash');
+
+  if (!trashSheet) {
+    ui.alert('Papperskorgen är tom');
+    return;
+  }
+
+  const count = trashSheet.getLastRow() - 1;
+
+  if (count > 0) {
+    trashSheet.deleteRows(2, count);
+
+    logAudit_({
+      action: 'empty_trash',
+      entity_type: 'system',
+      old_value: `${count} posts`,
+      source: 'ui'
+    });
+  }
+
+  ui.alert('Papperskorgen tömd', `${count} poster har raderats permanent.`, ui.ButtonSet.OK);
 }
 
 // ============================================================================

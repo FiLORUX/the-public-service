@@ -772,10 +772,20 @@ function handleTcIn_(data) {
 
   // Update post status to "recording"
   try {
-    updatePost(post_id, { status: POST_STATUS.RECORDING.key });
+    updatePost(post_id, { status: POST_STATUS.RECORDING.key }, 'api');
   } catch (e) {
     Logger.log(`Warning: Could not update post status: ${e.message}`);
   }
+
+  // Audit log
+  logAudit_({
+    action: 'tc_in',
+    entity_type: 'post',
+    entity_id: post_id,
+    new_value: tc_in || 'auto',
+    source: 'api',
+    user: operator || 'api'
+  });
 
   return {
     success: true,
@@ -824,10 +834,21 @@ function handleTcOut_(data) {
 
       // Update post status to "recorded"
       try {
-        updatePost(post_id, { status: POST_STATUS.RECORDED.key });
+        updatePost(post_id, { status: POST_STATUS.RECORDED.key }, 'api');
       } catch (e) {
         Logger.log(`Warning: Could not update post status: ${e.message}`);
       }
+
+      // Audit log
+      logAudit_({
+        action: 'tc_out',
+        entity_type: 'post',
+        entity_id: post_id,
+        old_value: tcIn,
+        new_value: tc_out || 'auto',
+        field: `duration=${duration}s`,
+        source: 'api'
+      });
 
       return {
         success: true,
@@ -842,7 +863,14 @@ function handleTcOut_(data) {
     }
   }
 
-  return { success: false, error: `No matching TC-IN found for ${post_id}` };
+  // Warn about missing TC-IN (but still allow logging for manual recovery)
+  Logger.log(`Warning: No matching TC-IN found for ${post_id}`);
+
+  return {
+    success: false,
+    error: `No matching TC-IN found for ${post_id}`,
+    hint: 'Send tc_in action first, or check if post_id is correct'
+  };
 }
 
 // ============================================================================

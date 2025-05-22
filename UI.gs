@@ -43,6 +43,10 @@ function onOpen() {
     .addItem('⬇️ Flytta post ner', 'movePostDown')
     .addSeparator()
     .addItem('🔢 Omnumrera alla poster', 'renumberAllPosts')
+    .addSeparator()
+    .addSubMenu(ui.createMenu('🗑️ Papperskorg')
+      .addItem('📋 Visa borttagna poster', 'showTrashDialog')
+      .addItem('♻️ Töm papperskorgen', 'emptyTrash'))
     .addToUi();
   
   ui.createMenu('👥 Personer')
@@ -1168,6 +1172,151 @@ function saveSettingsFromDialog(data) {
   });
 
   Logger.log('Settings saved from dialog');
+}
+
+// ============================================================================
+// TRASH / RECYCLE BIN FUNCTIONS
+// ============================================================================
+
+/**
+ * Show dialog with deleted posts (trash)
+ */
+function showTrashDialog() {
+  const ui = SpreadsheetApp.getUi();
+  const deletedPosts = getDeletedPosts_();
+
+  if (deletedPosts.length === 0) {
+    ui.alert('Papperskorgen är tom', 'Det finns inga borttagna poster att visa.', ui.ButtonSet.OK);
+    return;
+  }
+
+  const html = HtmlService.createHtmlOutput(`
+    <style>
+      body {
+        font-family: 'Roboto', Arial, sans-serif;
+        padding: 20px;
+        font-size: 13px;
+      }
+      h2 {
+        color: #37474F;
+        margin-bottom: 15px;
+      }
+      .info-box {
+        background: #E3F2FD;
+        padding: 12px;
+        border-radius: 4px;
+        margin-bottom: 15px;
+        font-size: 12px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 15px;
+      }
+      th, td {
+        padding: 8px;
+        text-align: left;
+        border-bottom: 1px solid #E0E0E0;
+      }
+      th {
+        background: #ECEFF1;
+        font-weight: 500;
+      }
+      tr:hover {
+        background: #F5F5F5;
+      }
+      .btn {
+        padding: 6px 12px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+      }
+      .btn-restore {
+        background: #4CAF50;
+        color: white;
+      }
+      .btn-restore:hover {
+        background: #388E3C;
+      }
+      .result {
+        margin-top: 15px;
+        padding: 12px;
+        border-radius: 4px;
+        display: none;
+      }
+      .result.success { background: #C8E6C9; display: block; }
+      .result.error { background: #FFCDD2; display: block; }
+      .result.loading { background: #FFF9C4; display: block; }
+      .close-btn {
+        margin-top: 15px;
+        padding: 10px 24px;
+        background: #9E9E9E;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+    </style>
+
+    <h2>🗑️ Papperskorg</h2>
+
+    <div class="info-box">
+      Klicka "Återställ" för att återskapa en borttagen post.
+      Posten återställs till sitt ursprungliga program.
+    </div>
+
+    <table>
+      <tr>
+        <th>Post ID</th>
+        <th>Pgm</th>
+        <th>Typ</th>
+        <th>Innehåll</th>
+        <th>Raderad</th>
+        <th></th>
+      </tr>
+      ${deletedPosts.map(p => `
+        <tr>
+          <td>${p.post_id}</td>
+          <td>${p.program_nr}</td>
+          <td>${p.type}</td>
+          <td>${(p.title || '').substring(0, 30)}${(p.title || '').length > 30 ? '...' : ''}</td>
+          <td>${p.deleted_at}</td>
+          <td><button class="btn btn-restore" onclick="restorePost('${p.post_id}')">♻️ Återställ</button></td>
+        </tr>
+      `).join('')}
+    </table>
+
+    <div id="result" class="result"></div>
+
+    <button class="close-btn" onclick="google.script.host.close()">Stäng</button>
+
+    <script>
+      function restorePost(postId) {
+        const resultEl = document.getElementById('result');
+        resultEl.className = 'result loading';
+        resultEl.innerHTML = 'Återställer post...';
+
+        google.script.run
+          .withSuccessHandler(function(result) {
+            resultEl.className = 'result success';
+            resultEl.innerHTML = 'Post återställd! Stänger dialog...';
+            setTimeout(() => {
+              google.script.host.close();
+            }, 1500);
+          })
+          .withFailureHandler(function(error) {
+            resultEl.className = 'result error';
+            resultEl.innerHTML = 'Fel: ' + error.message;
+          })
+          .restoreDeletedPost(postId);
+      }
+    </script>
+  `)
+    .setWidth(600)
+    .setHeight(450);
+
+  ui.showModalDialog(html, 'Papperskorg - Borttagna poster');
 }
 
 // ============================================================================
