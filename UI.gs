@@ -59,8 +59,12 @@ function onOpen() {
     .addItem('📊 Visa översikt', 'goToOverviewView')
     .addItem('📜 Visa kreditlista', 'goToCreditsView')
     .addSeparator()
-    .addItem('✅ Markera post som inspelad', 'markCurrentPostRecorded')
+    .addItem('🎯 Gå till aktiv inspelning', 'goToCurrentPost')
+    .addItem('📍 Visa inspelningsstatus', 'showRecordingStatus')
+    .addSeparator()
     .addItem('⏺️ Markera post som spelar in', 'markCurrentPostRecording')
+    .addItem('✅ Markera post som inspelad', 'markCurrentPostRecorded')
+    .addItem('👍 Markera post som godkänd', 'markCurrentPostApproved')
     .addToUi();
   
   ui.createMenu('⚙️ Inställningar')
@@ -895,6 +899,123 @@ function showPeopleList() {
     ui.alert('Kreditlista', 'Här visas alla registrerade personer.\n\nFör att lägga till ny person:\nPersoner > Lägg till person', ui.ButtonSet.OK);
   } else {
     ui.alert('Fel', 'Kreditlista-bladet finns inte. Kör System > Generate All Views först.', ui.ButtonSet.OK);
+  }
+}
+
+// ============================================================================
+// RECORDING STATUS & QUICK ACTIONS
+// ============================================================================
+
+/**
+ * Show current recording status dialog
+ */
+function showRecordingStatus() {
+  const ui = SpreadsheetApp.getUi();
+  const info = getCurrentPostInfo();
+
+  if (!info.hasCurrentPost) {
+    // Get stats from database
+    const postsSheet = getDbSheet_(DB.POSTS);
+    const data = postsSheet.getDataRange().getValues();
+
+    let planned = 0, recording = 0, recorded = 0, approved = 0;
+
+    for (let i = 1; i < data.length; i++) {
+      const status = data[i][POST_SCHEMA.STATUS];
+      if (status === POST_STATUS.PLANNED.key) planned++;
+      else if (status === POST_STATUS.RECORDING.key) recording++;
+      else if (status === POST_STATUS.RECORDED.key) recorded++;
+      else if (status === POST_STATUS.APPROVED.key) approved++;
+    }
+
+    const total = planned + recording + recorded + approved;
+    const progress = total > 0 ? Math.round(((recorded + approved) / total) * 100) : 0;
+
+    ui.alert(
+      '📊 Inspelningsstatus',
+      `Ingen aktiv inspelning just nu.\n\n` +
+      `STATISTIK:\n` +
+      `━━━━━━━━━━━━━━━━━━━\n` +
+      `📝 Planerade: ${planned}\n` +
+      `⏺️ Spelar in: ${recording}\n` +
+      `✅ Inspelade: ${recorded}\n` +
+      `👍 Godkända: ${approved}\n` +
+      `━━━━━━━━━━━━━━━━━━━\n` +
+      `Totalt: ${total} poster\n` +
+      `Framsteg: ${progress}%`,
+      ui.ButtonSet.OK
+    );
+  } else {
+    // Get post details
+    const postsSheet = getDbSheet_(DB.POSTS);
+    const data = postsSheet.getDataRange().getValues();
+    let postData = null;
+
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][POST_SCHEMA.ID] === info.post_id) {
+        postData = data[i];
+        break;
+      }
+    }
+
+    if (postData) {
+      const postType = getPostTypeByKey_(postData[POST_SCHEMA.TYPE]);
+      const typeName = postType ? postType.display_name : postData[POST_SCHEMA.TYPE];
+
+      ui.alert(
+        '🎬 AKTIV INSPELNING',
+        `POST: ${info.post_id}\n` +
+        `━━━━━━━━━━━━━━━━━━━\n` +
+        `Typ: ${typeName}\n` +
+        `Innehåll: ${postData[POST_SCHEMA.TITLE] || '(ingen titel)'}\n` +
+        `Duration: ${formatDuration_(postData[POST_SCHEMA.DURATION])}\n` +
+        `Plats: ${postData[POST_SCHEMA.LOCATION] || '(ej angiven)'}\n` +
+        `━━━━━━━━━━━━━━━━━━━\n\n` +
+        `Klicka "Produktion > Gå till aktiv inspelning"\n` +
+        `för att navigera till posten.`,
+        ui.ButtonSet.OK
+      );
+    } else {
+      ui.alert('Aktiv inspelning', `Post ${info.post_id} är markerad som aktiv.`, ui.ButtonSet.OK);
+    }
+  }
+}
+
+/**
+ * Mark current post as approved
+ */
+function markCurrentPostApproved() {
+  const ui = SpreadsheetApp.getUi();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const activeSheet = ss.getActiveSheet();
+  const sheetName = activeSheet.getName();
+
+  // Check if we're in a programme view
+  const programMatch = sheetName.match(/^Program (\d+)$/);
+  if (!programMatch) {
+    ui.alert('Fel', 'Denna funktion fungerar bara från Program-vyer (Program 1, 2, 3 eller 4).', ui.ButtonSet.OK);
+    return;
+  }
+
+  // Get current row
+  const activeRow = ss.getActiveRange().getRow();
+  if (activeRow < VIEW_CONFIG.DATA_START_ROW) {
+    ui.alert('Fel', 'Välj en post-rad först (rad 7 eller senare).', ui.ButtonSet.OK);
+    return;
+  }
+
+  // Get post_id from column A
+  const postId = activeSheet.getRange(activeRow, 1).getValue();
+  if (!postId || !postId.match || !postId.match(/^P\d+:\d+$/)) {
+    ui.alert('Fel', 'Kunde inte hitta post_id. Välj en rad med en post.', ui.ButtonSet.OK);
+    return;
+  }
+
+  try {
+    updatePost(postId, { status: POST_STATUS.APPROVED.key }, 'ui');
+    SpreadsheetApp.getActiveSpreadsheet().toast(`Post ${postId} markerad som godkänd`, '👍 Godkänd', 3);
+  } catch (error) {
+    ui.alert('Fel', `Kunde inte uppdatera post: ${error.message}`, ui.ButtonSet.OK);
   }
 }
 

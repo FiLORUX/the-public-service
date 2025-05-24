@@ -192,6 +192,162 @@ function recalculateRollingTime_(sheet, programNr) {
 }
 
 // ============================================================================
+// CURRENT POST HIGHLIGHTING
+// ============================================================================
+
+/**
+ * Highlight the currently recording post in programme views
+ * Adds a visual indicator (border + background) to make it easy to spot
+ */
+function highlightCurrentPost_(postId) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    // Parse post_id to get program number
+    const match = postId.match(/^P(\d+):(\d+)$/);
+    if (!match) return;
+
+    const programNr = parseInt(match[1], 10);
+    const sheetName = `Program ${programNr}`;
+    const sheet = ss.getSheetByName(sheetName);
+
+    if (!sheet) return;
+
+    // Find the row with this post
+    const data = sheet.getDataRange().getValues();
+    let targetRow = -1;
+
+    for (let i = VIEW_CONFIG.DATA_START_ROW - 1; i < data.length; i++) {
+      if (data[i][0] === postId) {
+        targetRow = i + 1;  // 1-based
+        break;
+      }
+    }
+
+    if (targetRow === -1) return;
+
+    // Clear any previous "current" highlighting
+    clearCurrentHighlight_(sheet);
+
+    // Apply highlight to current row
+    const rowRange = sheet.getRange(targetRow, 1, 1, 10);
+    rowRange.setBorder(true, true, true, true, false, false, '#FF5722', SpreadsheetApp.BorderStyle.SOLID_THICK);
+
+    // Store current post in document properties for reference
+    const docProps = PropertiesService.getDocumentProperties();
+    docProps.setProperty('CURRENT_POST', postId);
+    docProps.setProperty('CURRENT_POST_SHEET', sheetName);
+    docProps.setProperty('CURRENT_POST_ROW', String(targetRow));
+
+    Logger.log(`Highlighted current post: ${postId} at row ${targetRow}`);
+
+  } catch (error) {
+    Logger.log(`Highlight error: ${error.message}`);
+  }
+}
+
+/**
+ * Clear current post highlighting from a sheet
+ */
+function clearCurrentHighlight_(sheet) {
+  try {
+    const docProps = PropertiesService.getDocumentProperties();
+    const prevRow = docProps.getProperty('CURRENT_POST_ROW');
+    const prevSheet = docProps.getProperty('CURRENT_POST_SHEET');
+
+    if (prevRow && prevSheet === sheet.getName()) {
+      const rowNum = parseInt(prevRow, 10);
+      if (rowNum >= VIEW_CONFIG.DATA_START_ROW) {
+        const rowRange = sheet.getRange(rowNum, 1, 1, 10);
+        rowRange.setBorder(false, false, false, false, false, false);
+      }
+    }
+  } catch (error) {
+    Logger.log(`Clear highlight error: ${error.message}`);
+  }
+}
+
+/**
+ * Clear all current post highlighting (called when recording stops)
+ */
+function clearAllCurrentHighlights_() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const docProps = PropertiesService.getDocumentProperties();
+
+    const prevSheet = docProps.getProperty('CURRENT_POST_SHEET');
+    const prevRow = docProps.getProperty('CURRENT_POST_ROW');
+
+    if (prevSheet && prevRow) {
+      const sheet = ss.getSheetByName(prevSheet);
+      if (sheet) {
+        const rowNum = parseInt(prevRow, 10);
+        if (rowNum >= VIEW_CONFIG.DATA_START_ROW) {
+          const rowRange = sheet.getRange(rowNum, 1, 1, 10);
+          rowRange.setBorder(false, false, false, false, false, false);
+        }
+      }
+    }
+
+    // Clear properties
+    docProps.deleteProperty('CURRENT_POST');
+    docProps.deleteProperty('CURRENT_POST_SHEET');
+    docProps.deleteProperty('CURRENT_POST_ROW');
+
+  } catch (error) {
+    Logger.log(`Clear all highlights error: ${error.message}`);
+  }
+}
+
+/**
+ * Get the currently recording post info
+ */
+function getCurrentPostInfo() {
+  const docProps = PropertiesService.getDocumentProperties();
+  const postId = docProps.getProperty('CURRENT_POST');
+
+  if (!postId) {
+    return { hasCurrentPost: false };
+  }
+
+  return {
+    hasCurrentPost: true,
+    post_id: postId,
+    sheet: docProps.getProperty('CURRENT_POST_SHEET'),
+    row: parseInt(docProps.getProperty('CURRENT_POST_ROW'), 10)
+  };
+}
+
+/**
+ * Navigate to and highlight the current recording post
+ */
+function goToCurrentPost() {
+  const ui = SpreadsheetApp.getUi();
+  const info = getCurrentPostInfo();
+
+  if (!info.hasCurrentPost) {
+    ui.alert('Ingen aktiv inspelning', 'Det finns ingen post som spelar in just nu.', ui.ButtonSet.OK);
+    return;
+  }
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(info.sheet);
+
+  if (!sheet) {
+    ui.alert('Fel', `Kunde inte hitta bladet ${info.sheet}`, ui.ButtonSet.OK);
+    return;
+  }
+
+  // Activate sheet and select the row
+  sheet.activate();
+  const range = sheet.getRange(info.row, 1, 1, 10);
+  sheet.setActiveRange(range);
+
+  // Ensure visible
+  SpreadsheetApp.flush();
+}
+
+// ============================================================================
 // CHANGE DETECTION (for database sheet edits)
 // ============================================================================
 
@@ -773,6 +929,8 @@ function handleTcIn_(data) {
   // Update post status to "recording"
   try {
     updatePost(post_id, { status: POST_STATUS.RECORDING.key }, 'api');
+    // Highlight current post in views
+    highlightCurrentPost_(post_id);
   } catch (e) {
     Logger.log(`Warning: Could not update post status: ${e.message}`);
   }
@@ -835,6 +993,8 @@ function handleTcOut_(data) {
       // Update post status to "recorded"
       try {
         updatePost(post_id, { status: POST_STATUS.RECORDED.key }, 'api');
+        // Clear current post highlighting since recording is done
+        clearAllCurrentHighlights_();
       } catch (e) {
         Logger.log(`Warning: Could not update post status: ${e.message}`);
       }
