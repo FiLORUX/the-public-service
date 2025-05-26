@@ -374,6 +374,159 @@ function logAudit_(auditData) {
 }
 
 // ============================================================================
+// CACHING LAYER
+// ============================================================================
+
+/**
+ * Cache for frequently accessed data
+ * Uses CacheService for persistence across executions
+ */
+const CACHE_CONFIG = {
+  POST_TYPES_KEY: 'cache_post_types',
+  PEOPLE_KEY: 'cache_people',
+  PROGRAMS_KEY: 'cache_programs',
+  TTL_SECONDS: 300  // 5 minutes
+};
+
+/**
+ * Get cached data or fetch from sheet
+ * @param {String} cacheKey - Cache key
+ * @param {Function} fetchFn - Function to fetch data if not cached
+ * @returns {Array} - Cached or fresh data
+ */
+function getCachedData_(cacheKey, fetchFn) {
+  const cache = CacheService.getScriptCache();
+
+  try {
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+  } catch (e) {
+    // Cache miss or parse error
+  }
+
+  // Fetch fresh data
+  const data = fetchFn();
+
+  // Store in cache
+  try {
+    cache.put(cacheKey, JSON.stringify(data), CACHE_CONFIG.TTL_SECONDS);
+  } catch (e) {
+    // Cache too large, skip caching
+    Logger.log(`Cache put failed for ${cacheKey}: ${e.message}`);
+  }
+
+  return data;
+}
+
+/**
+ * Invalidate specific cache
+ */
+function invalidateCache_(cacheKey) {
+  const cache = CacheService.getScriptCache();
+  cache.remove(cacheKey);
+}
+
+/**
+ * Invalidate all caches
+ */
+function invalidateAllCaches() {
+  const cache = CacheService.getScriptCache();
+  cache.removeAll([
+    CACHE_CONFIG.POST_TYPES_KEY,
+    CACHE_CONFIG.PEOPLE_KEY,
+    CACHE_CONFIG.PROGRAMS_KEY
+  ]);
+  Logger.log('All caches invalidated');
+}
+
+/**
+ * Get all post types with caching
+ */
+function getAllPostTypesCached_() {
+  return getCachedData_(CACHE_CONFIG.POST_TYPES_KEY, () => {
+    const sheet = getDbSheet_(DB.POST_TYPES);
+    const data = sheet.getDataRange().getValues();
+    return data.slice(1);  // Skip header
+  });
+}
+
+/**
+ * Get all people with caching
+ */
+function getAllPeopleCached_() {
+  return getCachedData_(CACHE_CONFIG.PEOPLE_KEY, () => {
+    const sheet = getDbSheet_(DB.PEOPLE);
+    const data = sheet.getDataRange().getValues();
+    return data.slice(1);  // Skip header
+  });
+}
+
+/**
+ * Get post type by key with caching
+ */
+function getPostTypeByKeyCached_(typeKey) {
+  const postTypes = getAllPostTypesCached_();
+
+  for (let i = 0; i < postTypes.length; i++) {
+    const row = postTypes[i];
+    if (row[POST_TYPE_SCHEMA.TYPE_KEY] === typeKey) {
+      return {
+        type_key: row[POST_TYPE_SCHEMA.TYPE_KEY],
+        display_name: row[POST_TYPE_SCHEMA.DISPLAY_NAME],
+        default_duration_sec: row[POST_TYPE_SCHEMA.DEFAULT_DURATION],
+        icon: row[POST_TYPE_SCHEMA.ICON],
+        requires_people: row[POST_TYPE_SCHEMA.REQUIRES_PEOPLE],
+        requires_text_author: row[POST_TYPE_SCHEMA.REQUIRES_TEXT_AUTHOR],
+        requires_composer: row[POST_TYPE_SCHEMA.REQUIRES_COMPOSER],
+        category: row[POST_TYPE_SCHEMA.CATEGORY],
+        bg_colour: row[POST_TYPE_SCHEMA.BG_COLOUR],
+        row_height: row[POST_TYPE_SCHEMA.ROW_HEIGHT],
+        description: row[POST_TYPE_SCHEMA.DESCRIPTION]
+      };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Find person by name with caching
+ */
+function findPersonByNameCached_(name) {
+  if (!name) return null;
+
+  const people = getAllPeopleCached_();
+  const searchName = name.toLowerCase().trim();
+
+  for (let i = 0; i < people.length; i++) {
+    if (people[i][PERSON_SCHEMA.NAME].toLowerCase().trim() === searchName) {
+      return people[i];
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Get person name by ID with caching
+ */
+function getPersonNameByIdCached_(personId) {
+  if (!personId) return '';
+
+  const people = getAllPeopleCached_();
+
+  for (let i = 0; i < people.length; i++) {
+    if (people[i][PERSON_SCHEMA.ID] === personId) {
+      return people[i][PERSON_SCHEMA.NAME];
+    }
+  }
+
+  return personId;  // Return ID if not found
+}
+
+// ============================================================================
 // SEED DATA
 // ============================================================================
 
@@ -843,6 +996,289 @@ function emptyTrash() {
   }
 
   ui.alert('Papperskorgen tömd', `${count} poster har raderats permanent.`, ui.ButtonSet.OK);
+}
+
+// ============================================================================
+// PROGRAM ARCHIVING
+// ============================================================================
+
+/**
+ * Archive a program to Google Drive (for historical records)
+ * Creates a JSON backup of the program and all its posts
+ */
+function archiveProgram(programNr) {
+  const ui = SpreadsheetApp.getUi();
+
+  // Validate program number
+  if (programNr < 1 || programNr > 4) {
+    throw new Error('Invalid program number. Must be 1-4.');
+  }
+
+  // Get program data
+  const programsSheet = getDbSheet_(DB.PROGRAMS);
+  const programsData = programsSheet.getDataRange().getValues();
+  let programRow = null;
+
+  for (let i = 1; i < programsData.length; i++) {
+    if (programsData[i][0] === programNr) {
+      programRow = programsData[i];
+      break;
+    }
+  }
+
+  if (!programRow) {
+    throw new Error(`Program ${programNr} not found`);
+  }
+
+  // Get all posts for this program
+  const posts = getAllPostsForProgram_(programNr);
+
+  if (posts.length === 0) {
+    throw new Error(`Program ${programNr} has no posts to archive`);
+  }
+
+  // Build archive object
+  const archive = {
+    archived_at: getTimestamp_(),
+    system_version: SYSTEM_VERSION,
+    program: {
+      program_nr: programNr,
+      location: programRow[1],
+      production_date: programRow[2],
+      broadcast_date: programRow[3],
+      theme: programRow[4],
+      season: programRow[5],
+      target_duration: programRow[6],
+      start_time: programRow[7],
+      notes: programRow[8]
+    },
+    posts: posts.map(row => ({
+      post_id: row[POST_SCHEMA.ID],
+      sort_order: row[POST_SCHEMA.SORT_ORDER],
+      type: row[POST_SCHEMA.TYPE],
+      title: row[POST_SCHEMA.TITLE],
+      duration: row[POST_SCHEMA.DURATION],
+      people_ids: row[POST_SCHEMA.PEOPLE_IDS],
+      location: row[POST_SCHEMA.LOCATION],
+      info_pos: row[POST_SCHEMA.INFO_POS],
+      graphics: row[POST_SCHEMA.GRAPHICS],
+      notes: row[POST_SCHEMA.NOTES],
+      recording_day: row[POST_SCHEMA.RECORDING_DAY],
+      recording_time: row[POST_SCHEMA.RECORDING_TIME],
+      status: row[POST_SCHEMA.STATUS],
+      text_author: row[POST_SCHEMA.TEXT_AUTHOR],
+      composer: row[POST_SCHEMA.COMPOSER],
+      arranger: row[POST_SCHEMA.ARRANGER],
+      open_text: row[POST_SCHEMA.OPEN_TEXT],
+      created: row[POST_SCHEMA.CREATED],
+      modified: row[POST_SCHEMA.MODIFIED]
+    })),
+    stats: {
+      total_posts: posts.length,
+      total_duration: posts.reduce((sum, p) => sum + (p[POST_SCHEMA.DURATION] || 0), 0),
+      by_status: {
+        planned: posts.filter(p => p[POST_SCHEMA.STATUS] === POST_STATUS.PLANNED.key).length,
+        recorded: posts.filter(p => p[POST_SCHEMA.STATUS] === POST_STATUS.RECORDED.key).length,
+        approved: posts.filter(p => p[POST_SCHEMA.STATUS] === POST_STATUS.APPROVED.key).length
+      }
+    }
+  };
+
+  // Save to Google Drive
+  const folder = getOrCreateArchiveFolder_();
+  const filename = `archive_program${programNr}_${archive.program.production_date || 'undated'}_${getTimestamp_().replace(/[: ]/g, '-')}.json`;
+
+  folder.createFile(filename, JSON.stringify(archive, null, 2), MimeType.PLAIN_TEXT);
+
+  // Audit log
+  logAudit_({
+    action: 'archive',
+    entity_type: 'program',
+    entity_id: String(programNr),
+    new_value: filename,
+    source: 'ui'
+  });
+
+  Logger.log(`Archived program ${programNr} to ${filename}`);
+
+  return { success: true, filename: filename, posts_count: posts.length };
+}
+
+/**
+ * Get or create archive folder in Google Drive
+ */
+function getOrCreateArchiveFolder_() {
+  const folderName = 'Gudstjänst_Arkiv';
+
+  // Check if we have a stored folder ID
+  const settingsSheet = getDbSheet_(DB.SETTINGS);
+  const settingsData = settingsSheet.getDataRange().getValues();
+
+  let folderId = null;
+  for (let i = 1; i < settingsData.length; i++) {
+    if (settingsData[i][0] === 'archive_folder_id') {
+      folderId = settingsData[i][1];
+      break;
+    }
+  }
+
+  // Try to get existing folder
+  if (folderId) {
+    try {
+      return DriveApp.getFolderById(folderId);
+    } catch (e) {
+      // Folder was deleted or not accessible
+    }
+  }
+
+  // Create new folder
+  const folder = DriveApp.createFolder(folderName);
+  const newFolderId = folder.getId();
+
+  // Store folder ID in settings
+  let found = false;
+  for (let i = 1; i < settingsData.length; i++) {
+    if (settingsData[i][0] === 'archive_folder_id') {
+      settingsSheet.getRange(i + 1, 2).setValue(newFolderId);
+      found = true;
+      break;
+    }
+  }
+  if (!found) {
+    settingsSheet.appendRow(['archive_folder_id', newFolderId, 'Google Drive folder for archived programs']);
+  }
+
+  return folder;
+}
+
+/**
+ * Clear all posts from a program (after archiving)
+ */
+function clearProgramPosts(programNr) {
+  const ui = SpreadsheetApp.getUi();
+
+  const confirm = ui.alert(
+    'Rensa program?',
+    `Detta kommer att TA BORT ALLA poster från Program ${programNr}.\n\n` +
+    'Se till att du har arkiverat programmet först!\n\n' +
+    'Denna åtgärd kan INTE ångras.',
+    ui.ButtonSet.YES_NO
+  );
+
+  if (confirm !== ui.Button.YES) {
+    return { success: false, cancelled: true };
+  }
+
+  const postsSheet = getDbSheet_(DB.POSTS);
+  const data = postsSheet.getDataRange().getValues();
+
+  // Find rows to delete (from bottom up to preserve row indices)
+  const rowsToDelete = [];
+  for (let i = data.length - 1; i >= 1; i--) {
+    if (data[i][POST_SCHEMA.PROGRAM_NR] === programNr) {
+      rowsToDelete.push(i + 1);  // 1-based
+    }
+  }
+
+  // Delete rows
+  rowsToDelete.forEach(rowIndex => {
+    postsSheet.deleteRow(rowIndex);
+  });
+
+  // Audit log
+  logAudit_({
+    action: 'clear_program',
+    entity_type: 'program',
+    entity_id: String(programNr),
+    old_value: `${rowsToDelete.length} posts`,
+    source: 'ui'
+  });
+
+  // Reset program metadata (optional - keep location)
+  const programsSheet = getDbSheet_(DB.PROGRAMS);
+  const programsData = programsSheet.getDataRange().getValues();
+
+  for (let i = 1; i < programsData.length; i++) {
+    if (programsData[i][0] === programNr) {
+      const timestamp = getTimestamp_();
+      // Clear production/broadcast dates, theme, etc but keep location and target duration
+      programsSheet.getRange(i + 1, 3).setValue('');  // production_date
+      programsSheet.getRange(i + 1, 4).setValue('');  // broadcast_date
+      programsSheet.getRange(i + 1, 5).setValue('');  // theme
+      programsSheet.getRange(i + 1, 9).setValue('');  // notes
+      programsSheet.getRange(i + 1, 11).setValue(timestamp);  // modified
+      break;
+    }
+  }
+
+  ui.alert('Program rensat', `${rowsToDelete.length} poster har tagits bort från Program ${programNr}.`, ui.ButtonSet.OK);
+
+  return { success: true, deleted_count: rowsToDelete.length };
+}
+
+/**
+ * Archive and clear a program (combined operation)
+ */
+function archiveAndClearProgram(programNr) {
+  const ui = SpreadsheetApp.getUi();
+
+  const confirm = ui.alert(
+    `Arkivera och rensa Program ${programNr}?`,
+    `Detta kommer att:\n\n` +
+    `1. Spara en arkivkopia till Google Drive\n` +
+    `2. Ta bort alla poster från programmet\n\n` +
+    `Programmet blir sedan redo för en ny produktion.`,
+    ui.ButtonSet.YES_NO
+  );
+
+  if (confirm !== ui.Button.YES) {
+    return;
+  }
+
+  try {
+    // First archive
+    const archiveResult = archiveProgram(programNr);
+
+    if (!archiveResult.success) {
+      ui.alert('Arkivering misslyckades', archiveResult.error || 'Okänt fel', ui.ButtonSet.OK);
+      return;
+    }
+
+    // Then clear (without additional confirmation)
+    const postsSheet = getDbSheet_(DB.POSTS);
+    const data = postsSheet.getDataRange().getValues();
+
+    const rowsToDelete = [];
+    for (let i = data.length - 1; i >= 1; i--) {
+      if (data[i][POST_SCHEMA.PROGRAM_NR] === programNr) {
+        rowsToDelete.push(i + 1);
+      }
+    }
+
+    rowsToDelete.forEach(rowIndex => {
+      postsSheet.deleteRow(rowIndex);
+    });
+
+    logAudit_({
+      action: 'archive_and_clear',
+      entity_type: 'program',
+      entity_id: String(programNr),
+      new_value: archiveResult.filename,
+      source: 'ui'
+    });
+
+    ui.alert(
+      'Klart!',
+      `Program ${programNr} har arkiverats och rensats.\n\n` +
+      `Arkivfil: ${archiveResult.filename}\n` +
+      `Poster arkiverade: ${archiveResult.posts_count}\n\n` +
+      `Programmet är nu redo för en ny produktion.`,
+      ui.ButtonSet.OK
+    );
+
+  } catch (error) {
+    ui.alert('Fel', error.message, ui.ButtonSet.OK);
+  }
 }
 
 // ============================================================================

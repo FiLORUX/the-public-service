@@ -775,6 +775,20 @@ function doPost(e) {
         response = handleIncrementClip_(data);
         break;
 
+      // Batch operations (for efficiency with large datasets)
+      case 'batch_update':
+        response = handleBatchUpdate_(data);
+        break;
+      case 'batch_get':
+        response = handleBatchGet_(data);
+        break;
+
+      // Cache management
+      case 'invalidate_cache':
+        invalidateAllCaches();
+        response = { success: true, message: 'All caches invalidated' };
+        break;
+
       default:
         response = {
           success: false,
@@ -782,7 +796,8 @@ function doPost(e) {
           available_actions: [
             'tc_in', 'tc_out', 'status_update', 'set_recording',
             'mark_recorded', 'mark_approved', 'get_posts', 'get_current',
-            'get_next', 'get_post', 'get_schedule', 'next_clip', 'increment_clip'
+            'get_next', 'get_post', 'get_schedule', 'next_clip', 'increment_clip',
+            'batch_update', 'batch_get', 'invalidate_cache'
           ]
         };
     }
@@ -1408,6 +1423,139 @@ function getNextClipNumber_() {
   } catch (e) {
     return 1;
   }
+}
+
+// ============================================================================
+// BATCH API HANDLERS
+// ============================================================================
+
+/**
+ * Batch update multiple posts at once
+ * Expected data: { updates: [{post_id, status}, {post_id, status}, ...] }
+ * More efficient than multiple single updates
+ */
+function handleBatchUpdate_(data) {
+  const { updates } = data;
+
+  if (!updates || !Array.isArray(updates)) {
+    return { success: false, error: 'updates array required' };
+  }
+
+  if (updates.length > 50) {
+    return { success: false, error: 'Maximum 50 updates per batch' };
+  }
+
+  const results = [];
+  let successCount = 0;
+  let errorCount = 0;
+
+  // Get all posts data once (more efficient than individual lookups)
+  const sheet = getDbSheet_(DB.POSTS);
+  const allData = sheet.getDataRange().getValues();
+
+  // Create lookup map for faster access
+  const postRowMap = new Map();
+  for (let i = 1; i < allData.length; i++) {
+    postRowMap.set(allData[i][POST_SCHEMA.ID], {
+      rowIndex: i + 1,
+      data: allData[i]
+    });
+  }
+
+  // Process each update
+  updates.forEach((update, index) => {
+    const { post_id } = update;
+
+    if (!post_id) {
+      results.push({ index, post_id: null, success: false, error: 'post_id required' });
+      errorCount++;
+      return;
+    }
+
+    const postInfo = postRowMap.get(post_id);
+
+    if (!postInfo) {
+      results.push({ index, post_id, success: false, error: 'Post not found' });
+      errorCount++;
+      return;
+    }
+
+    try {
+      // Build update object (excluding post_id and internal fields)
+      const updateFields = {};
+      Object.keys(update).forEach(key => {
+        if (key !== 'post_id' && !key.startsWith('_')) {
+          updateFields[key] = update[key];
+        }
+      });
+
+      // Use existing updatePost function
+      updatePost(post_id, updateFields, 'api_batch');
+
+      results.push({ index, post_id, success: true });
+      successCount++;
+
+    } catch (error) {
+      results.push({ index, post_id, success: false, error: error.message });
+      errorCount++;
+    }
+  });
+
+  return {
+    success: errorCount === 0,
+    message: `Batch complete: ${successCount} succeeded, ${errorCount} failed`,
+    total: updates.length,
+    success_count: successCount,
+    error_count: errorCount,
+    results: results
+  };
+}
+
+/**
+ * Batch get multiple posts by IDs
+ * Expected data: { post_ids: ["P1:1", "P1:2", ...] }
+ */
+function handleBatchGet_(data) {
+  const { post_ids } = data;
+
+  if (!post_ids || !Array.isArray(post_ids)) {
+    return { success: false, error: 'post_ids array required' };
+  }
+
+  if (post_ids.length > 100) {
+    return { success: false, error: 'Maximum 100 posts per batch' };
+  }
+
+  // Get all posts data once
+  const sheet = getDbSheet_(DB.POSTS);
+  const allData = sheet.getDataRange().getValues();
+
+  // Create lookup map
+  const postMap = new Map();
+  for (let i = 1; i < allData.length; i++) {
+    postMap.set(allData[i][POST_SCHEMA.ID], allData[i]);
+  }
+
+  // Fetch requested posts
+  const posts = [];
+  const notFound = [];
+
+  post_ids.forEach(postId => {
+    const post = postMap.get(postId);
+    if (post) {
+      posts.push(formatPostForApi_(post));
+    } else {
+      notFound.push(postId);
+    }
+  });
+
+  return {
+    success: true,
+    found: posts.length,
+    not_found: notFound.length,
+    posts: posts,
+    missing: notFound
+  };
 }
 
 // ============================================================================

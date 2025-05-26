@@ -71,6 +71,19 @@ function onOpen() {
     .addItem('🎨 Redigera posttyper', 'goToPostTypesSheet')
     .addItem('📝 Redigera program­metadata', 'goToProgramsSheet')
     .addItem('🔧 System­inställningar', 'showSettingsDialog')
+    .addSeparator()
+    .addSubMenu(ui.createMenu('📦 Arkivering')
+      .addItem('📦 Arkivera Program 1', 'archiveProgram1')
+      .addItem('📦 Arkivera Program 2', 'archiveProgram2')
+      .addItem('📦 Arkivera Program 3', 'archiveProgram3')
+      .addItem('📦 Arkivera Program 4', 'archiveProgram4')
+      .addSeparator()
+      .addItem('🔄 Arkivera & rensa Program 1', 'archiveAndClearProgram1')
+      .addItem('🔄 Arkivera & rensa Program 2', 'archiveAndClearProgram2')
+      .addItem('🔄 Arkivera & rensa Program 3', 'archiveAndClearProgram3')
+      .addItem('🔄 Arkivera & rensa Program 4', 'archiveAndClearProgram4'))
+    .addSeparator()
+    .addItem('🗑️ Rensa cache', 'invalidateAllCaches')
     .addToUi();
 }
 
@@ -1081,6 +1094,20 @@ function goToProgramsSheet() {
     SpreadsheetApp.getUi().alert('Du kan nu redigera program­metadata. Dölj bladet igen när du är klar.');
   }
 }
+
+// ============================================================================
+// ARCHIVING WRAPPER FUNCTIONS
+// ============================================================================
+
+function archiveProgram1() { archiveProgram(1); }
+function archiveProgram2() { archiveProgram(2); }
+function archiveProgram3() { archiveProgram(3); }
+function archiveProgram4() { archiveProgram(4); }
+
+function archiveAndClearProgram1() { archiveAndClearProgram(1); }
+function archiveAndClearProgram2() { archiveAndClearProgram(2); }
+function archiveAndClearProgram3() { archiveAndClearProgram(3); }
+function archiveAndClearProgram4() { archiveAndClearProgram(4); }
 
 // ============================================================================
 // INFORMATION DIALOGUES
