@@ -134,13 +134,10 @@ function handleProgramViewEdit_(e, sheet, row, col) {
   try {
     const updates = {};
     updates[dbField] = newValue;
-    updatePost(postId, updates);
-    
-    // If duration was edited, recalculate rolling time
-    if (dbField === 'duration') {
-      recalculateRollingTime_(sheet, programNr);
-    }
-    
+    updatePost(postId, updates, 'ui');
+
+    // Rolling time is calculated via ARRAYFORMULA in the view - no manual recalc needed
+
   } catch (error) {
     Logger.log(`Failed to update post ${postId}: ${error.message}`);
     e.range.setNote(`Update failed: ${error.message}`);
@@ -171,29 +168,12 @@ function convertPeopleNamesToIds_(namesString) {
   return ids.join(',');
 }
 
-/**
- * Recalculate rolling time for a programme
- * Rolling time = cumulative duration
- */
-function recalculateRollingTime_(sheet, programNr) {
-  const posts = getAllPostsForProgram_(programNr);
-  
-  // Sort by sort_order
-  posts.sort((a, b) => a[POST_SCHEMA.SORT_ORDER] - b[POST_SCHEMA.SORT_ORDER]);
-  
-  let cumulative = 0;
-  posts.forEach((post, index) => {
-    cumulative += post[POST_SCHEMA.DURATION];
-    
-    // Update rolling time in view (column F = Rullande)
-    const viewRow = VIEW_CONFIG.DATA_START_ROW + index;
-    sheet.getRange(viewRow, 6).setValue(formatDuration_(cumulative));
-  });
-}
-
 // ============================================================================
 // CURRENT POST HIGHLIGHTING
 // ============================================================================
+// Note: Rolling time is calculated via ARRAYFORMULA in Views.gs (F7)
+// No manual recalculation needed - the formula updates automatically when
+// durations change in _DB_Posts
 
 /**
  * Highlight the currently recording post in programme views
@@ -1340,13 +1320,13 @@ function handleGetSchedule_(data) {
 
     const schedule = posts.map(post => formatPostForApi_(post));
 
-    // Calculate statistics
+    // Calculate statistics (use database keys, not display names)
     const stats = {
       total: schedule.length,
-      planned: schedule.filter(p => p.status === 'planerad').length,
-      recording: schedule.filter(p => p.status === 'recording').length,
-      recorded: schedule.filter(p => p.status === 'inspelad').length,
-      approved: schedule.filter(p => p.status === 'godkand').length
+      planned: schedule.filter(p => p.status === POST_STATUS.PLANNED.key).length,
+      recording: schedule.filter(p => p.status === POST_STATUS.RECORDING.key).length,
+      recorded: schedule.filter(p => p.status === POST_STATUS.RECORDED.key).length,
+      approved: schedule.filter(p => p.status === POST_STATUS.APPROVED.key).length
     };
 
     return {
@@ -1585,6 +1565,7 @@ function formatPostForApi_(postRow) {
 
 /**
  * Calculate duration between two timecodes (HH:MM:SS or HH:MM:SS:FF)
+ * Returns 0 if result would be negative (invalid timecode order)
  */
 function calculateTcDuration_(tcIn, tcOut) {
   const parseTC = (tc) => {
@@ -1596,5 +1577,13 @@ function calculateTcDuration_(tcIn, tcOut) {
     return 0;
   };
 
-  return parseTC(tcOut) - parseTC(tcIn);
+  const duration = parseTC(tcOut) - parseTC(tcIn);
+
+  // Return 0 if negative (tcOut before tcIn is invalid)
+  if (duration < 0) {
+    Logger.log(`Warning: Negative duration calculated (tcIn=${tcIn}, tcOut=${tcOut})`);
+    return 0;
+  }
+
+  return duration;
 }

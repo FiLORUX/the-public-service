@@ -1037,20 +1037,20 @@ function archiveProgram(programNr) {
     throw new Error(`Program ${programNr} has no posts to archive`);
   }
 
-  // Build archive object
+  // Build archive object (use PROGRAM_SCHEMA for correct indices)
   const archive = {
     archived_at: getTimestamp_(),
     system_version: SYSTEM_VERSION,
     program: {
       program_nr: programNr,
-      location: programRow[1],
-      production_date: programRow[2],
-      broadcast_date: programRow[3],
-      theme: programRow[4],
-      season: programRow[5],
-      target_duration: programRow[6],
-      start_time: programRow[7],
-      notes: programRow[8]
+      location: programRow[PROGRAM_SCHEMA.LOCATION],
+      start_date: programRow[PROGRAM_SCHEMA.START_DATE],
+      broadcast_date: programRow[PROGRAM_SCHEMA.BROADCAST_DATE],
+      church_year: programRow[PROGRAM_SCHEMA.CHURCH_YEAR],
+      prod_nr: programRow[PROGRAM_SCHEMA.PROD_NR],
+      target_duration: programRow[PROGRAM_SCHEMA.TARGET_LENGTH],
+      start_time: programRow[PROGRAM_SCHEMA.START_TIME],
+      notes: programRow[PROGRAM_SCHEMA.NOTES]
     },
     posts: posts.map(row => ({
       post_id: row[POST_SCHEMA.ID],
