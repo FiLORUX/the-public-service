@@ -269,7 +269,7 @@ function createPostFromDialog(data) {
     
     // Update post with people IDs
     if (peopleIds.length > 0) {
-      updatePost(postId, { people_ids: peopleIds.join(',') });
+      updatePost(postId, { people_ids: peopleIds.join(',') }, 'ui');
     }
   }
   
@@ -523,7 +523,7 @@ function importPostsFromDialog(data) {
         });
 
         if (peopleIds.length > 0) {
-          updatePost(postId, { people_ids: peopleIds.join(',') });
+          updatePost(postId, { people_ids: peopleIds.join(',') }, 'import');
         }
       }
 
@@ -611,9 +611,9 @@ function markCurrentPostRecorded() {
     return;
   }
   
-  updatePost(postId, { status: POST_STATUS.RECORDED.key });
+  updatePost(postId, { status: POST_STATUS.RECORDED.key }, 'ui');
   SpreadsheetApp.getActiveSpreadsheet().toast(`Post ${postId} markerad som inspelad`, 'Status uppdaterad', 2);
-  
+
   // Refresh current view
   SpreadsheetApp.flush();
 }
@@ -627,10 +627,10 @@ function markCurrentPostRecording() {
     SpreadsheetApp.getUi().alert('Markera en rad med en post först');
     return;
   }
-  
-  updatePost(postId, { status: POST_STATUS.RECORDING.key });
+
+  updatePost(postId, { status: POST_STATUS.RECORDING.key }, 'ui');
   SpreadsheetApp.getActiveSpreadsheet().toast(`Post ${postId} markerad som spelar in`, 'Status uppdaterad', 2);
-  
+
   SpreadsheetApp.flush();
 }
 
@@ -736,8 +736,8 @@ function movePost_(direction) {
     const targetSortOrder = targetPost[POST_SCHEMA.SORT_ORDER];
 
     // Update both posts in database
-    updatePost(currentPost[POST_SCHEMA.ID], { sort_order: targetSortOrder });
-    updatePost(targetPost[POST_SCHEMA.ID], { sort_order: currentSortOrder });
+    updatePost(currentPost[POST_SCHEMA.ID], { sort_order: targetSortOrder }, 'ui');
+    updatePost(targetPost[POST_SCHEMA.ID], { sort_order: currentSortOrder }, 'ui');
 
     // Refresh the view
     refreshProgramView(programNr);

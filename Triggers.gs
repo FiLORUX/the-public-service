@@ -1054,7 +1054,7 @@ function handleStatusUpdate_(data) {
   }
 
   try {
-    updatePost(post_id, { status: status || POST_STATUS.PLANNED.key });
+    updatePost(post_id, { status: status || POST_STATUS.PLANNED.key }, 'api');
     return {
       success: true,
       message: `Status updated for ${post_id}`,
@@ -1071,7 +1071,7 @@ function handleStatusUpdate_(data) {
  * Expected data: { post_id }
  */
 function handleSetRecording_(data) {
-  const { post_id, program_nr } = data;
+  const { post_id } = data;
 
   if (!post_id) {
     return { success: false, error: 'post_id required' };
@@ -1086,13 +1086,13 @@ function handleSetRecording_(data) {
 
       posts.forEach(post => {
         if (post[POST_SCHEMA.STATUS] === POST_STATUS.RECORDING.key) {
-          updatePost(post[POST_SCHEMA.ID], { status: POST_STATUS.PLANNED.key });
+          updatePost(post[POST_SCHEMA.ID], { status: POST_STATUS.PLANNED.key }, 'api');
         }
       });
     }
 
     // Set this post as recording
-    updatePost(post_id, { status: POST_STATUS.RECORDING.key });
+    updatePost(post_id, { status: POST_STATUS.RECORDING.key }, 'api');
 
     return {
       success: true,
@@ -1117,7 +1117,7 @@ function handleMarkRecorded_(data) {
   }
 
   try {
-    updatePost(post_id, { status: POST_STATUS.RECORDED.key });
+    updatePost(post_id, { status: POST_STATUS.RECORDED.key }, 'api');
     return {
       success: true,
       message: `${post_id} marked as recorded`,
@@ -1141,7 +1141,7 @@ function handleMarkApproved_(data) {
   }
 
   try {
-    updatePost(post_id, { status: POST_STATUS.APPROVED.key });
+    updatePost(post_id, { status: POST_STATUS.APPROVED.key }, 'api');
     return {
       success: true,
       message: `${post_id} marked as approved`,
