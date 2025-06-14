@@ -591,10 +591,11 @@ function getApiSecret_() {
  * Checks for api_key in query params, POST body, or X-API-Key header
  */
 function validateApiAuth_(e, data) {
-  const secret = getApiSecret_();
+  const props = PropertiesService.getScriptProperties();
+  const masterSecret = props.getProperty('API_SECRET');
 
   // If no secret is set, allow all requests (for backwards compatibility)
-  if (!secret) {
+  if (!masterSecret) {
     return { valid: true, warning: 'API_SECRET not configured - API is unprotected' };
   }
 
@@ -609,11 +610,20 @@ function validateApiAuth_(e, data) {
     return { valid: false, error: 'API key required. Provide api_key parameter.' };
   }
 
-  if (providedKey !== secret) {
-    return { valid: false, error: 'Invalid API key' };
+  // Check against master key
+  if (providedKey === masterSecret) {
+    return { valid: true, client: 'master' };
   }
 
-  return { valid: true };
+  // Check against client-specific keys
+  const clientKeys = JSON.parse(props.getProperty('CLIENT_API_KEYS') || '{}');
+  for (const [clientName, clientKey] of Object.entries(clientKeys)) {
+    if (clientKey === providedKey && !clientName.endsWith('_created')) {
+      return { valid: true, client: clientName };
+    }
+  }
+
+  return { valid: false, error: 'Invalid API key' };
 }
 
 /**

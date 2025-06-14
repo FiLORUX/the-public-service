@@ -67,6 +67,19 @@ function onOpen() {
     .addItem('👍 Markera post som godkänd', 'markCurrentPostApproved')
     .addToUi();
   
+  ui.createMenu('🔗 Integration')
+    .addItem('📊 Visa sync-status', 'showSyncStatusDialog')
+    .addItem('⚙️ Konfigurera Supabase sync', 'showSyncConfigDialog')
+    .addSeparator()
+    .addItem('🔑 Visa API-nycklar', 'showExternalApiDialog')
+    .addItem('🔄 Generera ny API-nyckel', 'generateNewApiKey')
+    .addSeparator()
+    .addItem('📤 Full sync till Supabase', 'fullSyncToSupabase')
+    .addItem('📥 Hämta från Supabase', 'pullAllFromSupabase')
+    .addSeparator()
+    .addItem('🧪 Testa API-anslutning', 'testApiConnection')
+    .addToUi();
+
   ui.createMenu('⚙️ Inställningar')
     .addItem('🎨 Redigera posttyper', 'goToPostTypesSheet')
     .addItem('📝 Redigera program­metadata', 'goToProgramsSheet')

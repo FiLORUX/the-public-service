@@ -726,3 +726,389 @@ function periodicSync() {
   // Update last sync time
   props.setProperty('LAST_PERIODIC_SYNC', new Date().toISOString());
 }
+
+// ============================================================================
+// SYNC STATUS DIALOG
+// ============================================================================
+
+/**
+ * Show sync status dialog with live information
+ */
+function showSyncStatusDialog() {
+  const props = PropertiesService.getScriptProperties();
+  const isEnabled = props.getProperty(SYNC_CONFIG.ENABLED_KEY) === 'true';
+  const workerUrl = props.getProperty(SYNC_CONFIG.WORKER_URL_KEY) || '(ej konfigurerad)';
+  const lastSync = props.getProperty('LAST_PERIODIC_SYNC') || 'Aldrig';
+  const apiSecret = props.getProperty('API_SECRET') ? 'Konfigurerad' : 'Ej satt';
+
+  // Test connection status
+  let connectionStatus = 'Okänd';
+  let connectionColor = '#666';
+
+  if (isEnabled && workerUrl !== '(ej konfigurerad)') {
+    try {
+      const secret = props.getProperty(SYNC_CONFIG.WEBHOOK_SECRET_KEY) || '';
+      const response = UrlFetchApp.fetch(workerUrl + '/health', {
+        method: 'get',
+        headers: { 'X-Webhook-Secret': secret },
+        muteHttpExceptions: true
+      });
+
+      if (response.getResponseCode() === 200) {
+        connectionStatus = 'Ansluten';
+        connectionColor = '#34a853';
+      } else {
+        connectionStatus = 'Fel: HTTP ' + response.getResponseCode();
+        connectionColor = '#ea4335';
+      }
+    } catch (e) {
+      connectionStatus = 'Ej nåbar';
+      connectionColor = '#ea4335';
+    }
+  }
+
+  // Get post counts
+  let postCounts = { total: 0, p1: 0, p2: 0, p3: 0, p4: 0 };
+  try {
+    const sheet = getDbSheet_(DB.POSTS);
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      const pn = data[i][POST_SCHEMA.PROGRAM_NR];
+      postCounts.total++;
+      if (pn === 1) postCounts.p1++;
+      else if (pn === 2) postCounts.p2++;
+      else if (pn === 3) postCounts.p3++;
+      else if (pn === 4) postCounts.p4++;
+    }
+  } catch (e) { /* ignore */ }
+
+  const html = HtmlService.createHtmlOutput(`
+    <style>
+      body { font-family: 'Google Sans', Arial, sans-serif; padding: 20px; }
+      h2 { color: #1a73e8; margin-bottom: 24px; }
+      .status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      .status-card { background: #f8f9fa; padding: 16px; border-radius: 8px; }
+      .status-card h3 { margin: 0 0 8px 0; font-size: 14px; color: #666; }
+      .status-value { font-size: 18px; font-weight: 500; }
+      .status-value.enabled { color: #34a853; }
+      .status-value.disabled { color: #ea4335; }
+      .connection-indicator { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; }
+      .section { margin-top: 24px; }
+      .section h3 { color: #333; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+      table { width: 100%; border-collapse: collapse; }
+      td { padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+      td:first-child { color: #666; }
+      td:last-child { text-align: right; font-weight: 500; }
+      .buttons { margin-top: 24px; text-align: right; }
+      button { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-left: 8px; }
+      .primary { background: #1a73e8; color: white; }
+      .secondary { background: #f1f3f4; }
+    </style>
+
+    <h2>Integrationsstatus</h2>
+
+    <div class="status-grid">
+      <div class="status-card">
+        <h3>Supabase Sync</h3>
+        <div class="status-value ${isEnabled ? 'enabled' : 'disabled'}">
+          ${isEnabled ? '✓ Aktiverad' : '✗ Inaktiverad'}
+        </div>
+      </div>
+      <div class="status-card">
+        <h3>Worker-anslutning</h3>
+        <div class="status-value">
+          <span class="connection-indicator" style="background: ${connectionColor}"></span>
+          ${connectionStatus}
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Konfiguration</h3>
+      <table>
+        <tr><td>Worker URL</td><td>${workerUrl}</td></tr>
+        <tr><td>Senaste sync</td><td>${lastSync}</td></tr>
+        <tr><td>Intern API-nyckel</td><td>${apiSecret}</td></tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <h3>Data i Sheets</h3>
+      <table>
+        <tr><td>Totalt antal poster</td><td>${postCounts.total}</td></tr>
+        <tr><td>Program 1</td><td>${postCounts.p1} poster</td></tr>
+        <tr><td>Program 2</td><td>${postCounts.p2} poster</td></tr>
+        <tr><td>Program 3</td><td>${postCounts.p3} poster</td></tr>
+        <tr><td>Program 4</td><td>${postCounts.p4} poster</td></tr>
+      </table>
+    </div>
+
+    <div class="buttons">
+      <button class="secondary" onclick="google.script.host.close()">Stäng</button>
+      <button class="primary" onclick="google.script.run.showSyncConfigDialog(); google.script.host.close();">
+        Konfigurera
+      </button>
+    </div>
+  `)
+  .setWidth(500)
+  .setHeight(550);
+
+  SpreadsheetApp.getUi().showModalDialog(html, 'Sync-status');
+}
+
+// ============================================================================
+// EXTERNAL API MANAGEMENT
+// ============================================================================
+
+/**
+ * Show external API dialog with keys and endpoints
+ */
+function showExternalApiDialog() {
+  const props = PropertiesService.getScriptProperties();
+  const apiSecret = props.getProperty('API_SECRET') || '';
+  const hasApiSecret = apiSecret.length > 0;
+
+  // Get the web app URL
+  const scriptId = ScriptApp.getScriptId();
+  const webAppUrl = `https://script.google.com/macros/s/${scriptId}/exec`;
+
+  // Get client keys
+  const clientKeys = JSON.parse(props.getProperty('CLIENT_API_KEYS') || '{}');
+  const clientList = Object.entries(clientKeys).map(([name, key]) =>
+    `<tr>
+      <td>${name}</td>
+      <td><code>${key.substring(0, 8)}...</code></td>
+      <td>${clientKeys[name + '_created'] || 'Okänt'}</td>
+      <td><button onclick="revokeKey('${name}')">Återkalla</button></td>
+    </tr>`
+  ).join('') || '<tr><td colspan="4" style="color:#666; text-align:center;">Inga klient-nycklar genererade</td></tr>';
+
+  const html = HtmlService.createHtmlOutput(`
+    <style>
+      body { font-family: 'Google Sans', Arial, sans-serif; padding: 20px; }
+      h2 { color: #1a73e8; margin-bottom: 8px; }
+      .subtitle { color: #666; margin-bottom: 24px; }
+      .section { margin-bottom: 24px; }
+      .section h3 { color: #333; margin-bottom: 12px; font-size: 14px; }
+      .endpoint-box { background: #f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 12px; }
+      .endpoint-box label { font-weight: 500; display: block; margin-bottom: 4px; }
+      .endpoint-box code { display: block; background: #fff; padding: 8px; border-radius: 4px; font-size: 12px; word-break: break-all; border: 1px solid #ddd; }
+      .copy-btn { margin-top: 8px; padding: 4px 12px; background: #e8f0fe; border: none; border-radius: 4px; cursor: pointer; color: #1a73e8; }
+      table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+      th { text-align: left; padding: 8px; background: #f8f9fa; font-weight: 500; }
+      td { padding: 8px; border-bottom: 1px solid #eee; }
+      td button { padding: 4px 8px; background: #fce8e6; border: none; border-radius: 4px; cursor: pointer; color: #c5221f; }
+      .status { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+      .status-dot { width: 10px; height: 10px; border-radius: 50%; }
+      .status-dot.ok { background: #34a853; }
+      .status-dot.warn { background: #ea4335; }
+      .actions { display: flex; gap: 8px; margin-top: 24px; }
+      button.primary { padding: 10px 20px; background: #1a73e8; color: white; border: none; border-radius: 4px; cursor: pointer; }
+      button.secondary { padding: 10px 20px; background: #f1f3f4; border: none; border-radius: 4px; cursor: pointer; }
+      .warning { background: #fef7e0; border: 1px solid #f9ab00; padding: 12px; border-radius: 8px; margin-bottom: 16px; }
+    </style>
+
+    <h2>Externa API-anslutningar</h2>
+    <p class="subtitle">Hantera API-nycklar för Companion, vMix och andra externa system</p>
+
+    <div class="status">
+      <span class="status-dot ${hasApiSecret ? 'ok' : 'warn'}"></span>
+      <span>API-autentisering: ${hasApiSecret ? 'Aktiverad' : 'Ej konfigurerad'}</span>
+    </div>
+
+    ${!hasApiSecret ? `
+    <div class="warning">
+      <strong>⚠️ Varning:</strong> Ingen API-nyckel är satt. API:et är öppet för alla.
+      <br>Klicka "Generera master-nyckel" nedan för att aktivera autentisering.
+    </div>
+    ` : ''}
+
+    <div class="section">
+      <h3>API Endpoint</h3>
+      <div class="endpoint-box">
+        <label>Web App URL (för Companion/vMix)</label>
+        <code id="webAppUrl">${webAppUrl}</code>
+        <button class="copy-btn" onclick="copyToClipboard('webAppUrl')">Kopiera</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Master API-nyckel</h3>
+      <div class="endpoint-box">
+        <label>API Secret (för Script Properties)</label>
+        <code id="apiSecret">${hasApiSecret ? apiSecret : '(ej satt)'}</code>
+        ${hasApiSecret ? '<button class="copy-btn" onclick="copyToClipboard(\'apiSecret\')">Kopiera</button>' : ''}
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Klient-nycklar</h3>
+      <table>
+        <thead>
+          <tr><th>Namn</th><th>Nyckel</th><th>Skapad</th><th></th></tr>
+        </thead>
+        <tbody>
+          ${clientList}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="actions">
+      <button class="secondary" onclick="google.script.host.close()">Stäng</button>
+      <button class="primary" onclick="generateMasterKey()">
+        ${hasApiSecret ? 'Regenerera master-nyckel' : 'Generera master-nyckel'}
+      </button>
+      <button class="primary" onclick="addClientKey()">Lägg till klient</button>
+    </div>
+
+    <script>
+      function copyToClipboard(elementId) {
+        const text = document.getElementById(elementId).innerText;
+        navigator.clipboard.writeText(text).then(() => {
+          alert('Kopierat till urklipp!');
+        });
+      }
+
+      function generateMasterKey() {
+        if (confirm('Detta kommer generera en ny master API-nyckel. Alla befintliga integrationer måste uppdateras. Fortsätt?')) {
+          google.script.run
+            .withSuccessHandler(() => {
+              alert('Ny master-nyckel genererad!');
+              google.script.host.close();
+            })
+            .withFailureHandler(err => alert('Fel: ' + err))
+            .generateNewApiKey();
+        }
+      }
+
+      function addClientKey() {
+        const name = prompt('Ange namn för klienten (t.ex. "Companion Studio A"):');
+        if (name) {
+          google.script.run
+            .withSuccessHandler(key => {
+              alert('Klient-nyckel skapad!\\n\\nNyckel: ' + key + '\\n\\nSpara denna nyckel säkert.');
+              google.script.host.close();
+            })
+            .withFailureHandler(err => alert('Fel: ' + err))
+            .generateClientApiKey(name);
+        }
+      }
+
+      function revokeKey(name) {
+        if (confirm('Återkalla nyckel för "' + name + '"? Klienten kommer inte längre kunna ansluta.')) {
+          google.script.run
+            .withSuccessHandler(() => {
+              alert('Nyckel återkallad');
+              google.script.host.close();
+            })
+            .withFailureHandler(err => alert('Fel: ' + err))
+            .revokeClientApiKey(name);
+        }
+      }
+    </script>
+  `)
+  .setWidth(600)
+  .setHeight(650);
+
+  SpreadsheetApp.getUi().showModalDialog(html, 'API-hantering');
+}
+
+/**
+ * Generate new master API key
+ */
+function generateNewApiKey() {
+  const key = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '').substring(0, 16);
+  const props = PropertiesService.getScriptProperties();
+  props.setProperty('API_SECRET', key);
+
+  Logger.log('New API secret generated');
+  SpreadsheetApp.getActiveSpreadsheet().toast('Ny API-nyckel genererad', 'API', 3);
+
+  return key;
+}
+
+/**
+ * Generate client-specific API key
+ */
+function generateClientApiKey(clientName) {
+  const props = PropertiesService.getScriptProperties();
+  const clientKeys = JSON.parse(props.getProperty('CLIENT_API_KEYS') || '{}');
+
+  const key = 'client_' + Utilities.getUuid().replace(/-/g, '');
+  clientKeys[clientName] = key;
+  clientKeys[clientName + '_created'] = new Date().toISOString().split('T')[0];
+
+  props.setProperty('CLIENT_API_KEYS', JSON.stringify(clientKeys));
+
+  Logger.log(`Client API key generated for: ${clientName}`);
+  return key;
+}
+
+/**
+ * Revoke client API key
+ */
+function revokeClientApiKey(clientName) {
+  const props = PropertiesService.getScriptProperties();
+  const clientKeys = JSON.parse(props.getProperty('CLIENT_API_KEYS') || '{}');
+
+  delete clientKeys[clientName];
+  delete clientKeys[clientName + '_created'];
+
+  props.setProperty('CLIENT_API_KEYS', JSON.stringify(clientKeys));
+
+  Logger.log(`Client API key revoked for: ${clientName}`);
+}
+
+/**
+ * Pull all posts from Supabase
+ */
+function pullAllFromSupabase() {
+  if (!isSyncEnabled_()) {
+    SpreadsheetApp.getUi().alert('Sync är inte aktiverat. Konfigurera först.');
+    return;
+  }
+
+  const ui = SpreadsheetApp.getUi();
+  const confirm = ui.alert(
+    'Hämta från Supabase',
+    'Detta kommer hämta alla poster från Supabase och skriva över lokala ändringar. Fortsätt?',
+    ui.ButtonSet.YES_NO
+  );
+
+  if (confirm !== ui.Button.YES) return;
+
+  try {
+    const response = sendToWorker_('/api/posts', {});
+
+    if (response.success && response.posts) {
+      let updated = 0;
+      for (const post of response.posts) {
+        handleInboundUpdate_(post);
+        updated++;
+      }
+
+      ui.alert(`Hämtning klar!\n\nUppdaterade ${updated} poster från Supabase.`);
+    } else {
+      ui.alert('Kunde inte hämta data: ' + (response.error || 'Okänt fel'));
+    }
+  } catch (error) {
+    ui.alert('Fel vid hämtning: ' + error.message);
+  }
+}
+
+/**
+ * Test API connection (menu wrapper)
+ */
+function testApiConnection() {
+  const props = PropertiesService.getScriptProperties();
+  const workerUrl = props.getProperty(SYNC_CONFIG.WORKER_URL_KEY);
+  const secret = props.getProperty(SYNC_CONFIG.WEBHOOK_SECRET_KEY);
+
+  if (!workerUrl) {
+    SpreadsheetApp.getUi().alert('Worker URL är inte konfigurerad.\n\nGå till Integration > Konfigurera Supabase sync');
+    return;
+  }
+
+  const result = testSyncConnection(workerUrl, secret);
+  SpreadsheetApp.getUi().alert('API-test\n\n' + result);
+}
