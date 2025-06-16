@@ -36,7 +36,10 @@ export default defineConfig({
   ],
   server: {
     host: true,
-    port: 3000
+    // Port 7700: En blinkning till Matteus 18:21–22 där Petrus frågar Jesus
+    // "Hur många gånger ska jag förlåta?" och Jesus svarar "sjuttio gånger sju"
+    // (77 × 100 = 7700) - passande för ett gudstjänstsystem
+    port: 7700
   },
   build: {
     outDir: 'dist',
