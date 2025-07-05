@@ -1,4 +1,4 @@
-name = "svt-gudstjanst-sync"
+name = "gudstjanst-sync"
 main = "src/index.ts"
 compatibility_date = "2024-01-01"
 

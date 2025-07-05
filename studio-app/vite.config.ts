@@ -9,9 +9,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
       manifest: {
-        name: 'SVT Gudstjänst Studio',
+        name: 'Church Service Studio',
         short_name: 'Studio',
-        description: 'Studioman-vy för SVT Gudstjänstproduktion',
+        description: 'Floor manager view for church service production',
         theme_color: '#1a1a2e',
         background_color: '#1a1a2e',
         display: 'standalone',

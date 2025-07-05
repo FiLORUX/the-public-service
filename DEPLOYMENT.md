@@ -1,290 +1,288 @@
-# 🚀 Deployment Guide
+# Deployment Guide
 
-## Snabbstart (5 minuter)
+## Quick Start (5 minutes)
 
-### Steg 1: Skapa Google Sheet
-1. Gå till https://sheets.google.com
-2. Skapa nytt kalkylblad
-3. Döp det till: `Gudstjänst Produktion - [PLATS] [ÅR]`
-   - Exempel: `Gudstjänst Produktion - MARIAKYRKAN 2025`
+### Step 1: Create Google Sheet
 
-### Steg 2: Öppna Apps Script Editor
-1. I ditt Google Sheet, välj: **Extensions > Apps Script**
-2. Du ser nu Script Editor med en tom `Code.gs` fil
+1. Navigate to https://sheets.google.com
+2. Create a new spreadsheet
+3. Name it: `Church Service Production – [VENUE] [YEAR]`
+   - Example: `Church Service Production – EXAMPLE CHURCH 2025`
 
-### Steg 3: Kopiera in kod-filerna
-1. **Ta bort** default `Code.gs` (klicka på papperskorgen)
-2. **Skapa 5 nya filer** (klicka på + bredvid Files):
-   
-   **Fil 1: Config.gs**
+### Step 2: Open Apps Script Editor
+
+1. In your Google Sheet, select: **Extensions > Apps Script**
+2. You will see the Script Editor with an empty `Code.gs` file
+
+### Step 3: Copy the Script Files
+
+1. **Delete** the default `Code.gs` (click the bin icon)
+2. **Create 6 new files** (click + next to Files):
+
+   **File 1: Config.gs**
    ```
-   1. Klicka + > Script
-   2. Döp till "Config"
-   3. Kopiera HELA innehållet från Config.gs
-   4. Klistra in
-   ```
-   
-   **Fil 2: Database.gs**
-   ```
-   1. Klicka + > Script
-   2. Döp till "Database"
-   3. Kopiera HELA innehållet från Database.gs
-   4. Klistra in
-   ```
-   
-   **Fil 3: Views.gs**
-   ```
-   1. Klicka + > Script
-   2. Döp till "Views"
-   3. Kopiera HELA innehållet från Views.gs
-   4. Klistra in
-   ```
-   
-   **Fil 4: UI.gs**
-   ```
-   1. Klicka + > Script
-   2. Döp till "UI"
-   3. Kopiera HELA innehållet från UI.gs
-   4. Klistra in
-   ```
-   
-   **Fil 5: Triggers.gs**
-   ```
-   1. Klicka + > Script
-   2. Döp till "Triggers"
-   3. Kopiera HELA innehållet från Triggers.gs
-   4. Klistra in
+   1. Click + > Script
+   2. Name it "Config"
+   3. Copy the ENTIRE contents from Config.gs
+   4. Paste
    ```
 
-3. **Spara projektet**: Ctrl+S (eller Cmd+S på Mac)
-4. **Döp projektet**: Klicka på "Untitled project" längst upp, döp till `Gudstjänst System`
+   **File 2: Database.gs**
+   ```
+   1. Click + > Script
+   2. Name it "Database"
+   3. Copy the ENTIRE contents from Database.gs
+   4. Paste
+   ```
 
-### Steg 4: Första körningen
-1. **Stäng Script Editor** (återgå till Google Sheet)
-2. **Ladda om sidan**: Tryck F5
-3. Efter 5-10 sekunder ser du nya menyer längst upp:
+   **File 3: Views.gs**
+   ```
+   1. Click + > Script
+   2. Name it "Views"
+   3. Copy the ENTIRE contents from Views.gs
+   4. Paste
+   ```
+
+   **File 4: UI.gs**
+   ```
+   1. Click + > Script
+   2. Name it "UI"
+   3. Copy the ENTIRE contents from UI.gs
+   4. Paste
+   ```
+
+   **File 5: Triggers.gs**
+   ```
+   1. Click + > Script
+   2. Name it "Triggers"
+   3. Copy the ENTIRE contents from Triggers.gs
+   4. Paste
+   ```
+
+   **File 6: Sync.gs**
+   ```
+   1. Click + > Script
+   2. Name it "Sync"
+   3. Copy the ENTIRE contents from Sync.gs
+   4. Paste
+   ```
+
+3. **Save the project**: Ctrl+S (or Cmd+S on Mac)
+4. **Name the project**: Click on "Untitled project" at the top, name it `Church Service System`
+
+### Step 4: First Run
+
+1. **Close Script Editor** (return to Google Sheet)
+2. **Reload the page**: Press F5
+3. After 5–10 seconds, you will see new menus at the top:
    - 📋 System
-   - 📝 Poster
-   - 👥 Personer
-   - 🎬 Produktion
-   - ⚙️ Inställningar
+   - 📝 Posts
+   - 👥 People
+   - 🎬 Production
+   - 🔗 Integration
+   - ⚙️ Settings
 
-### Steg 5: Bootstrap Database
-1. Välj: **📋 System > 🚀 Bootstrap Database**
-2. En dialogruta dyker upp: **"This will create/reset the database structure..."**
-3. Klicka **Yes**
-4. Vänta 10-20 sekunder
-5. Du ser: **"Success! Database initialised successfully."**
+### Step 5: Bootstrap Database
 
-### Steg 6: Generera vyer
-1. Välj: **📋 System > 🔄 Generate All Views**
-2. Vänta 5-10 sekunder
-3. Du ser: **"All views generated successfully!"**
+1. Select: **📋 System > 🚀 Bootstrap Database**
+2. A dialogue appears: **"This will create/reset the database structure..."**
+3. Click **Yes**
+4. Wait 10–20 seconds
+5. You will see: **"Success! Database initialised successfully."**
 
-### ✅ Klart!
-Du har nu:
-- 6 dolda database-sheets (`_DB_*`)
-- 4 program-vyer (`Program 1-4`)
-- 1 inspelningsschema
-- 1 översikt-dashboard
-- 1 kreditlista
+### Step 6: Generate Views
+
+1. Select: **📋 System > 🔄 Generate All Views**
+2. Wait 5–10 seconds
+3. You will see: **"All views generated successfully!"**
+
+### Complete
+
+You now have:
+- 7 hidden database sheets (`_DB_*`)
+- 4 programme views (`Program 1–4`)
+- 1 recording schedule
+- 1 overview dashboard
+- 1 credits list
 
 ---
 
-## Nästa steg: Initial Configuration
+## Next Steps: Initial Configuration
 
-### Konfigurera program-metadata
-1. Välj: **⚙️ Inställningar > 📝 Redigera program­metadata**
-2. Bladet `_DB_Program` öppnas (nu synligt)
-3. Fyll i rad 2-5 (Program 1-4):
+### Configure Programme Metadata
+
+1. Select: **⚙️ Settings > 📝 Edit Programme Metadata**
+2. The sheet `_DB_Program` opens (now visible)
+3. Fill in rows 2–5 (Programmes 1–4):
 
 | program_nr | location | start_date | broadcast_date | church_year | prod_nr | target_length_sec | start_time | notes |
 |------------|----------|------------|----------------|-------------|---------|-------------------|------------|-------|
-| 1 | MARIAKYRKAN VÄXJÖ | 2025-01-30 | 2025-03-01 | 2 i fastan | SVT-GUD-001 | 2610 | 09:00:00 | |
-| 2 | MARIAKYRKAN VÄXJÖ | 2025-01-30 | 2025-03-08 | 3 i fastan | SVT-GUD-002 | 2610 | 09:00:00 | |
-| 3 | MARIAKYRKAN VÄXJÖ | 2025-01-30 | 2025-03-15 | 4 i fastan | SVT-GUD-003 | 2610 | 09:00:00 | |
-| 4 | MARIAKYRKAN VÄXJÖ | 2025-01-30 | 2025-03-22 | 5 i fastan | SVT-GUD-004 | 2610 | 09:00:00 | |
+| 1 | EXAMPLE CHURCH | 2025-01-30 | 2025-03-01 | 2nd Sunday in Lent | PROD-2025-001 | 2610 | 09:00:00 | |
+| 2 | EXAMPLE CHURCH | 2025-01-30 | 2025-03-08 | 3rd Sunday in Lent | PROD-2025-002 | 2610 | 09:00:00 | |
+| 3 | EXAMPLE CHURCH | 2025-01-30 | 2025-03-15 | 4th Sunday in Lent | PROD-2025-003 | 2610 | 09:00:00 | |
+| 4 | EXAMPLE CHURCH | 2025-01-30 | 2025-03-22 | 5th Sunday in Lent | PROD-2025-004 | 2610 | 09:00:00 | |
 
-4. **target_length_sec** = måltid i sekunder
-   - 43:30 = 2610 sekunder
-   - 60:00 = 3600 sekunder
+4. **target_length_sec** = target duration in seconds
+   - 43:30 = 2610 seconds
+   - 60:00 = 3600 seconds
 
-5. När klart: **Högerklicka på bladet → Hide sheet**
+5. When complete: **Right-click on the sheet → Hide sheet**
 
-### Lägg till första personen
-1. Välj: **👥 Personer > ➕ Lägg till person**
-2. En dialog öppnas (HTML-formulär)
-3. Fyll i:
-   - **Namn**: Maria Löfgren
-   - **Roll**: predikant, liturg
-   - **Kontakt**: maria@exempel.se
-   - **Typ**: medverkande
-4. Klicka **Skapa person**
+### Add Your First Person
 
-### Skapa första posten
-1. Gå till bladet **Program 1**
-2. Välj: **📝 Poster > ➕ Lägg till ny post**
-3. Dialog öppnas
-4. Fyll i:
-   - **Program**: 1 (redan förvald)
-   - **Posttyp**: Predikan
-   - **Innehåll**: Predikan om hopp och framtidstro
-   - **Medverkande**: Maria Löfgren
-   - **Plats**: talarplats
-   - **Inspelningsdag**: Dag 1 - Textläsning & Predikan
-5. Klicka **Skapa post**
+1. Select: **👥 People > ➕ Add Person**
+2. A dialogue opens (HTML form)
+3. Fill in:
+   - **Name:** Maria Löfgren
+   - **Role:** preacher, liturgist
+   - **Contact:** maria@example.com
+   - **Type:** contributor
+4. Click **Create Person**
 
-### ✅ Du ser nu din första post!
-- I `Program 1`-bladet
-- Automatiskt tilldelat post-ID: **P1:1**
-- Default duration: **07:00** (7 minuter för predikan)
-- Rullande tid: **07:00**
+### Create Your First Post
 
----
+1. Navigate to the sheet **Program 1**
+2. Select: **📝 Posts > ➕ Add New Post**
+3. Dialogue opens
+4. Fill in:
+   - **Programme:** 1 (already selected)
+   - **Post type:** Sermon
+   - **Content:** Sermon on hope and the future
+   - **Contributors:** Maria Löfgren
+   - **Location:** pulpit
+   - **Recording day:** Day 1 – Scripture Readings & Sermons
+5. Click **Create Post**
 
-## Vanliga problem & lösningar
+### Your First Post Is Now Visible
 
-### Problem: "Custom menu dyker inte upp efter Bootstrap"
-**Lösning:**
-1. Ladda om sidan (F5)
-2. Om fortfarande inget: Gå till Script Editor
-3. Välj funktionen `onOpen` i dropdown längst upp
-4. Klicka Run (play-knappen)
-5. Första gången: "Authorization required" → klicka Review Permissions
-6. Välj ditt Google-konto
-7. Klicka Advanced → Go to Gudstjänst System (unsafe)
-8. Klicka Allow
-9. Återgå till Google Sheet, ladda om
-
-### Problem: "Bootstrap fails with error"
-**Lösning:**
-1. Gå till Script Editor
-2. Kolla **Executions** (vänstermeny, klocksymbol)
-3. Hitta fel-loggen, läs error message
-4. Vanligaste felet: saknad fil. Kontrollera att alla 5 .gs filer finns
-
-### Problem: "Views are empty after Generate"
-**Lösning:**
-1. Kontrollera att Bootstrap kördes utan fel
-2. Gå till Script Editor > View > Logs
-3. Sök efter "Created _DB_Posts sheet"
-4. Om inte där: kör Bootstrap igen
-
-### Problem: "Can't edit cells in Programme view"
-**Lösning:**
-- Kontrollera att du inte redigerar kolumn F (Rullande) – den är låst
-- Övriga kolumner ska vara redigerbara
-- Om fortfarande problem: kontrollera att triggers är installerade
+- In the `Program 1` sheet
+- Automatically assigned post ID: **P1:1**
+- Default duration: **07:00** (7 minutes for a sermon)
+- Rolling time: **07:00**
 
 ---
 
-## Advanced: clasp deployment (för dev)
+## Common Problems and Solutions
 
-Om du vill version-kontrollera koden lokalt:
+### Problem: Custom menu does not appear after Bootstrap
 
-### Installation
+**Solution:**
+1. Reload the page (F5)
+2. If still nothing: Go to Script Editor, select `onOpen` function, click Run
+3. Return to the Sheet and reload
+
+### Problem: "Database not initialised" error
+
+**Solution:**
+Run **📋 System > 🚀 Bootstrap Database** again
+
+### Problem: Views show no data
+
+**Solution:**
+1. Verify that posts exist in `_DB_Posts`
+2. Run **📋 System > 🔄 Generate All Views**
+3. Check that QUERY formulae in the views reference the correct sheets
+
+### Problem: Edits in views do not update the database
+
+**Solution:**
+1. Check that triggers are installed
+2. Open Script Editor > Triggers (clock icon on the left)
+3. Verify that edit triggers exist
+
+### Problem: Authorisation prompt appears repeatedly
+
+**Solution:**
+1. Clear browser cache
+2. Remove and re-authorise the script
+3. Check that you are using the same Google account
+
+---
+
+## Deploying the API
+
+### Enable Web App Deployment
+
+1. Open Script Editor
+2. Click **Deploy > New deployment**
+3. Select type: **Web app**
+4. Configure:
+   - **Description:** Church Service API v1.0
+   - **Execute as:** Me
+   - **Who has access:** Anyone (for Companion) or Anyone with link
+5. Click **Deploy**
+6. Copy the **Web app URL**
+
+### Configure API Authentication
+
+1. In Script Editor, go to **Project Settings** (gear icon)
+2. Scroll to **Script Properties**
+3. Add property:
+   - **Property:** `API_SECRET`
+   - **Value:** Generate a strong random key
+4. Save
+
+### Test the API
+
 ```bash
-npm install -g @google/clasp
-clasp login
-```
+# Health check (no auth required)
+curl "YOUR_WEB_APP_URL?action=status"
 
-### Setup
-```bash
-# I ditt projekt
-clasp create --type sheets --title "Gudstjänst System"
-clasp push
-```
-
-### Workflow
-```bash
-# Edit lokalt i VS Code
-# Push till Google Apps Script
-clasp push
-
-# Pull ändringar från Apps Script
-clasp pull
+# Get posts (requires auth)
+curl "YOUR_WEB_APP_URL?action=posts&program=1&api_key=YOUR_API_KEY"
 ```
 
 ---
 
-## Backup Strategy
+## Setting Up Automatic Backups
 
-### Daglig rutin
-1. **📋 System > 💾 Backup to JSON**
-2. Kopiera JSON-output
-3. Spara som: `data/backup_YYYY-MM-DD.json`
-4. Commit till GitHub
-
-### Automatisk (framtida)
-Skapa time-based trigger i Triggers.gs:
-```javascript
-ScriptApp.newTrigger('dailyBackup')
-  .timeBased()
-  .atHour(3)
-  .everyDays(1)
-  .create();
-```
+1. Select: **📋 System > 💾 Backup & Restore > ⏰ Enable Automatic Backup**
+2. Backups will run at 03:00, 11:00 and 19:00 daily
+3. Files are saved to Google Drive folder: `Gudstjänst_Backups`
+4. Last 30 backups are retained
 
 ---
 
-## GitHub Integration
+## Deploying the 2026 Architecture
 
-### Repo-struktur
-```
-gudstjanst-system/
-├── README.md
-├── DEPLOYMENT.md (denna fil)
-├── Config.gs
-├── Database.gs
-├── Views.gs
-├── UI.gs
-├── Triggers.gs
-├── data/
-│   ├── backup_2025-10-22.json
-│   ├── backup_2025-10-23.json
-│   └── ...
-└── docs/
-    ├── API.md
-    └── FAQ.md
-```
-
-### Commit-workflow
-```bash
-git add .
-git commit -m "feat: add new post type template"
-git push origin main
-```
+For teams requiring the advanced hybrid architecture (Supabase + Cloudflare Worker + iPad PWA), see [ARCHITECTURE-2026.md](ARCHITECTURE-2026.md).
 
 ---
 
-## Production Checklist
+## Checklist
 
-Innan en inspelning:
+### Pre-Production
 
-- [ ] All program-metadata korrekt?
-- [ ] Alla medverkande tillagda i Personer?
-- [ ] Alla poster skapade och sorterade?
-- [ ] Inspelningsdagar korrekt satta (Dag 1/2/3)?
-- [ ] Tider verkar rimliga? (kolla Översikt-bladet)
-- [ ] Backup gjord?
-- [ ] Inspelningsschema-bladet printat/tillgängligt?
+- [ ] Database bootstrapped
+- [ ] Views generated
+- [ ] Programme metadata configured
+- [ ] Contributors added
+- [ ] Posts created for all programmes
+- [ ] Recording days assigned
+- [ ] API deployed (if using Companion)
+- [ ] Automatic backups enabled
 
-Efter en inspelning:
+### Recording Day
 
-- [ ] Alla poster markerade som "Inspelad" eller "Godkänd"?
-- [ ] TC-logg kontrollerad (om använd)?
-- [ ] Backup gjord?
-- [ ] Problemrapport dokumenterad (om något gick fel)?
+- [ ] Recording schedule printed/displayed
+- [ ] All contributors present in system
+- [ ] Status tracking tested
+- [ ] Companion buttons configured (if applicable)
+
+### Post-Production
+
+- [ ] All posts marked as recorded or approved
+- [ ] Final backup taken
+- [ ] Programme archived (optional)
 
 ---
 
 ## Support
 
-**Problem?** Öppna issue på GitHub:
-https://github.com/davidthast/gudstjanst-system/issues
+**GitHub Issues:** https://github.com/FiLORUX/gudstjanst-production/issues
 
-**Email:** david@thast.se
-
----
-
-_Happy broadcasting! 🎬_
+**Documentation:**
+- [README.md](README.md) – Overview and user guide
+- [API.md](API.md) – API documentation
+- [ARCHITECTURE-2026.md](ARCHITECTURE-2026.md) – Advanced architecture
+- [FAQ.md](FAQ.md) – Frequently asked questions

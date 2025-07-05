@@ -409,5 +409,5 @@ Ensure post_id format is correct: `P{program}:{number}` (e.g., "P1:5", "P2:10")
 
 ## Support
 
-- **Issues:** https://github.com/FiLORUX/svt-gudstjanst/issues
+- **Issues:** https://github.com/FiLORUX/gudstjanst-production/issues
 - **Documentation:** See README.md and DEPLOYMENT.md

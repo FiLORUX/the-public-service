@@ -1,16 +1,16 @@
-# SVT Gudstjänst - Arkitektur 2026
+# Architecture 2026
 
-Modern hybrid-arkitektur som behåller Google Sheets som primärt UI medan Supabase (PostgreSQL) hanterar data som source of truth.
+A modern hybrid architecture that retains Google Sheets as the primary user interface whilst Supabase (PostgreSQL) serves as the source of truth.
 
-## Översikt
+## Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              ANVÄNDARGRÄNSSNITT                             │
+│                              USER INTERFACE                                 │
 ├─────────────────┬─────────────────┬─────────────────┬───────────────────────┤
 │  Google Sheets  │   iPad Studio   │    Companion    │      vMix/ATEM        │
-│  (SVT-delning,  │   (PWA för      │   (TC-kontroll) │   (Videoproduktion)   │
-│   mobil, iPad)  │   studioman)    │                 │                       │
+│  (sharing,      │   (PWA for      │   (TC control)  │   (video production)  │
+│   mobile, iPad) │   floor manager)│                 │                       │
 └────────┬────────┴────────┬────────┴────────┬────────┴───────────┬───────────┘
          │                 │                 │                    │
          │ onEdit trigger  │ Supabase        │ HTTP API           │
@@ -18,8 +18,8 @@ Modern hybrid-arkitektur som behåller Google Sheets som primärt UI medan Supab
          ▼                 ▼                 ▼                    ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                         CLOUDFLARE WORKER                                   │
-│  - Validering & transformation                                              │
-│  - Konflikthantering (optimistic locking)                                   │
+│  - Validation and transformation                                            │
+│  - Conflict handling (optimistic locking)                                   │
 │  - Rate limiting                                                            │
 │  - Webhook dispatch                                                         │
 └────────────────────────────────┬────────────────────────────────────────────┘
@@ -29,222 +29,238 @@ Modern hybrid-arkitektur som behåller Google Sheets som primärt UI medan Supab
 │                            SUPABASE                                         │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
 │  │    posts     │  │   people     │  │  programs    │  │  audit_log   │     │
-│  │  (ACID, RLS) │  │              │  │              │  │  (historik)  │     │
+│  │  (ACID, RLS) │  │              │  │              │  │  (history)   │     │
 │  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘     │
 │                                                                             │
-│  - PostgreSQL med full ACID                                                 │
+│  - PostgreSQL with full ACID guarantees                                     │
 │  - Row Level Security (RLS)                                                 │
-│  - Automatisk audit via triggers                                            │
+│  - Automatic audit via triggers                                             │
 │  - Realtime subscriptions (WebSocket)                                       │
 │  - Optimistic locking (version column)                                      │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Komponenter
+## Components
 
-### 1. Google Sheets (UI + Delning)
-- **Roll**: Primärt användargränssnitt, SVT-delning, mobil access
-- **Fördelar**: Alla känner till det, fungerar på alla enheter, gratis
-- **Sync**: `onEdit` trigger → Cloudflare Worker → Supabase
+### 1. Google Sheets (UI + Sharing)
+
+- **Role:** Primary user interface, team sharing, mobile access
+- **Advantages:** Familiar interface, works on all devices, zero cost
+- **Sync:** `onEdit` trigger → Cloudflare Worker → Supabase
 
 ### 2. Supabase (Source of Truth)
-- **Roll**: Datalagring med ACID-garantier, historik, realtime
-- **Schema**: `supabase/schema.sql`
-- **Features**:
-  - `version` kolumn för optimistic locking
-  - `audit_log` tabell fylls automatiskt via triggers
-  - `posts_active` view exkluderar soft-deleted poster
-  - `program_stats` view för snabb statistik
-  - Realtime enabled för live-uppdateringar
+
+- **Role:** Data storage with ACID guarantees, history, realtime
+- **Schema:** `supabase/schema.sql`
+- **Features:**
+  - `version` column for optimistic locking
+  - `audit_log` table populated automatically via triggers
+  - `posts_active` view excludes soft-deleted posts
+  - `program_stats` view for rapid statistics
+  - Realtime enabled for live updates
 
 ### 3. Cloudflare Worker (Sync Layer)
-- **Roll**: Mellanhand för all synkronisering
-- **Funktioner**:
-  - Validering av inkommande data
-  - Konfliktdetektering och -lösning
+
+- **Role:** Intermediary for all synchronisation
+- **Functions:**
+  - Validation of incoming data
+  - Conflict detection and resolution
   - Rate limiting
-  - Transformation mellan Sheets ↔ Supabase format
-- **Deployment**: `worker/` katalog
+  - Transformation between Sheets ↔ Supabase formats
+- **Deployment:** `worker/` directory
 
 ### 4. iPad Studio PWA
-- **Roll**: Optimerad vy för studioman
-- **Features**:
-  - Touch-optimerat gränssnitt
-  - Realtime via Supabase subscriptions
-  - Offline-kapabel via service worker
-  - Timer för inspelning
-- **Deployment**: `studio-app/` → Vercel/Netlify
 
-## Dataflöde
+- **Role:** Optimised view for floor manager
+- **Features:**
+  - Touch-optimised interface
+  - Realtime via Supabase subscriptions
+  - Offline-capable via service worker
+  - Recording timer
+- **Deployment:** `studio-app/` → Vercel/Netlify
+
+## Data Flow
 
 ### Sheets → Supabase
+
 ```
-1. Användare ändrar cell i Sheets
-2. onEdit trigger körs
-3. Sync.gs skickar till Cloudflare Worker
-4. Worker validerar, kollar version
-5. Om konflikt: returnerar 409, visar dialog
-6. Om OK: sparar till Supabase
-7. Supabase trigger loggar till audit_log
+1. User modifies cell in Sheets
+2. onEdit trigger fires
+3. Sync.gs sends to Cloudflare Worker
+4. Worker validates, checks version
+5. If conflict: returns 409, displays dialogue
+6. If OK: saves to Supabase
+7. Supabase trigger logs to audit_log
 ```
 
 ### Supabase → Sheets
+
 ```
-1. Extern klient (Studio, Companion) ändrar data
-2. Worker validerar och sparar till Supabase
-3. Worker anropar Sheets webhook
-4. Sync.gs tar emot, uppdaterar cell
+1. External client (Studio, Companion) modifies data
+2. Worker validates and saves to Supabase
+3. Worker calls Sheets webhook
+4. Sync.gs receives, updates cell
 ```
 
-### Konflikthantering
+### Conflict Handling
+
 ```
-1. Klient A läser post (version=5)
-2. Klient B läser samma post (version=5)
-3. Klient B sparar ändring → version=6
-4. Klient A försöker spara → 409 Conflict
-5. Klient A får val:
-   - Behåll min version (force push)
-   - Använd server-version
-   - Slå ihop (senaste per fält)
+1. Client A reads post (version=5)
+2. Client B reads same post (version=5)
+3. Client B saves change → version=6
+4. Client A attempts save → 409 Conflict
+5. Client A receives options:
+   - Keep my version (force push)
+   - Use server version
+   - Merge (latest per field)
 ```
 
-## Setup-guide
+## Setup Guide
 
-### Steg 1: Supabase
+### Step 1: Supabase
+
 ```bash
-# 1. Skapa projekt på supabase.com
+# 1. Create project at supabase.com
 
-# 2. Kör schema
-# Gå till SQL Editor, klistra in supabase/schema.sql
+# 2. Run schema
+# Navigate to SQL Editor, paste supabase/schema.sql
 
-# 3. Notera credentials
+# 3. Note credentials
 # - Project URL: https://xxx.supabase.co
 # - anon key: eyJ...
-# - service_role key: eyJ... (för Worker)
+# - service_role key: eyJ... (for Worker)
 ```
 
-### Steg 2: Cloudflare Worker
+### Step 2: Cloudflare Worker
+
 ```bash
 cd worker
 
-# Installera dependencies
+# Install dependencies
 npm install
 
-# Konfigurera secrets
+# Configure secrets
 wrangler secret put SUPABASE_URL
 wrangler secret put SUPABASE_SERVICE_KEY
 wrangler secret put SHEETS_WEBHOOK_SECRET
 
-# Deploya
+# Deploy
 npm run deploy
 
-# Notera URL: https://svt-gudstjanst-sync.xxx.workers.dev
+# Note URL: https://gudstjanst-sync.xxx.workers.dev
 ```
 
-### Steg 3: Google Sheets
+### Step 3: Google Sheets
+
 ```
-1. Öppna Apps Script (Extensions > Apps Script)
+1. Open Apps Script (Extensions > Apps Script)
 
-2. Lägg till Sync.gs
+2. Add Sync.gs
 
-3. Konfigurera Script Properties:
+3. Configure Script Properties:
    - SYNC_WORKER_URL = <Worker URL>
-   - SYNC_WEBHOOK_SECRET = <samma som i Worker>
+   - SYNC_WEBHOOK_SECRET = <same as in Worker>
    - SYNC_ENABLED = true
 
-4. Kör syncProgramToSupabase(1) för initial sync
+4. Run syncProgramToSupabase(1) for initial sync
 ```
 
-### Steg 4: iPad Studio PWA
+### Step 4: iPad Studio PWA
+
 ```bash
 cd studio-app
 
-# Installera dependencies
+# Install dependencies
 npm install
 
-# Skapa .env från .env.example
+# Create .env from .env.example
 cp .env.example .env
-# Fyll i VITE_SUPABASE_URL och VITE_SUPABASE_ANON_KEY
+# Fill in VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
 
-# Kör lokalt
+# Run locally
 npm run dev
 
-# Bygg för produktion
+# Build for production
 npm run build
 
-# Deploya till Vercel
+# Deploy to Vercel
 vercel
 ```
 
-## Kostnader
+## Costs
 
-| Tjänst | Kostnad | Inkluderat |
-|--------|---------|------------|
-| Supabase Free | 0 kr/mån | 500 MB databas, 2 GB bandbredd, unlimited API |
-| Cloudflare Workers Free | 0 kr/mån | 100k requests/dag |
-| Vercel Free | 0 kr/mån | 100 GB bandbredd, unlimited deploys |
-| Google Sheets | 0 kr/mån | Ingår i Workspace |
+| Service | Cost | Included |
+|---------|------|----------|
+| Supabase Free | £0/month | 500 MB database, 2 GB bandwidth, unlimited API |
+| Cloudflare Workers Free | £0/month | 100k requests/day |
+| Vercel Free | £0/month | 100 GB bandwidth, unlimited deploys |
+| Google Sheets | £0/month | Included in Workspace |
 
-**Total: 0 kr/mån**
+**Total: £0/month**
 
-## Migrationsplan
+## Migration Plan
 
-### Vecka 1: Databas
-- [ ] Skapa Supabase-projekt
-- [ ] Kör schema.sql
-- [ ] Verifiera att allt skapats korrekt
+### Week 1: Database
 
-### Vecka 2: Worker
-- [ ] Deploya Cloudflare Worker
-- [ ] Konfigurera secrets
-- [ ] Testa /health endpoint
+- [ ] Create Supabase project
+- [ ] Run schema.sql
+- [ ] Verify all tables created correctly
 
-### Vecka 3: Sheets-integration
-- [ ] Lägg till Sync.gs
-- [ ] Konfigurera Script Properties
-- [ ] Kör initial sync för alla program
+### Week 2: Worker
 
-### Vecka 4: iPad-vy
-- [ ] Deploya Studio PWA till Vercel
-- [ ] Testa på iPad
-- [ ] Optimera för produktionsmiljö
+- [ ] Deploy Cloudflare Worker
+- [ ] Configure secrets
+- [ ] Test /health endpoint
 
-### Vecka 5: Produktion
-- [ ] Full produktionstest
-- [ ] Utbilda användare
-- [ ] Gå live
+### Week 3: Sheets Integration
 
-## Framtida förbättringar
+- [ ] Add Sync.gs
+- [ ] Configure Script Properties
+- [ ] Run initial sync for all programmes
 
-1. **Offline-first i Sheets**: Service worker för Sheets-liknande offline-funktion
-2. **Push-notifikationer**: Notifiera vid TC_IN/TC_OUT via PWA
-3. **Companion-plugin**: Native integration istället för HTTP
-4. **vMix Data Source**: Direkt SQL-koppling till Supabase
-5. **Analytics dashboard**: Historisk statistik i Supabase Studio
+### Week 4: iPad View
 
-## Filer i detta repo
+- [ ] Deploy Studio PWA to Vercel
+- [ ] Test on iPad
+- [ ] Optimise for production environment
+
+### Week 5: Production
+
+- [ ] Full production test
+- [ ] Train users
+- [ ] Go live
+
+## Future Improvements
+
+1. **Offline-first in Sheets:** Service worker for Sheets-like offline functionality
+2. **Push notifications:** Notify on TC_IN/TC_OUT via PWA
+3. **Companion plugin:** Native integration instead of HTTP
+4. **vMix Data Source:** Direct SQL connection to Supabase
+5. **Analytics dashboard:** Historical statistics in Supabase Studio
+
+## Files in This Repository
 
 ```
-svt-gudstjanst/
+gudstjanst-production/
 ├── supabase/
-│   └── schema.sql          # PostgreSQL schema med triggers
+│   └── schema.sql          # PostgreSQL schema with triggers
 ├── worker/
 │   ├── src/index.ts        # Cloudflare Worker
 │   ├── package.json
 │   └── wrangler.toml
 ├── studio-app/
 │   ├── src/
-│   │   ├── App.tsx         # Huvud-komponent
+│   │   ├── App.tsx         # Main component
 │   │   ├── main.tsx
 │   │   └── styles.css
 │   ├── package.json
 │   ├── vite.config.ts
 │   └── .env.example
-├── Sync.gs                  # Apps Script sync-modul
+├── Sync.gs                  # Apps Script sync module
 ├── Config.gs
 ├── Database.gs
 ├── Triggers.gs
 ├── UI.gs
 ├── Views.gs
-└── ARCHITECTURE-2026.md     # Denna fil
+└── ARCHITECTURE-2026.md     # This file
 ```

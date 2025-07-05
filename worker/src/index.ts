@@ -1,11 +1,11 @@
 /**
- * SVT Gudstjänst Sync Worker
+ * Church Service Sync Worker
  *
- * Cloudflare Worker som hanterar bi-direktionell sync mellan:
- * - Google Sheets (UI/delning)
+ * Cloudflare Worker handling bi-directional synchronisation between:
+ * - Google Sheets (UI and sharing)
  * - Supabase (source of truth)
  * - Studio PWA (iPad)
- * - Companion/vMix (TC)
+ * - Companion/vMix (timecode control)
  */
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';

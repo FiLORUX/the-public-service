@@ -1,8 +1,8 @@
 {
-  "name": "svt-gudstjanst-studio",
+  "name": "gudstjanst-studio",
   "version": "1.0.0",
   "private": true,
-  "description": "iPad Studio View PWA for SVT Gudstjänst production",
+  "description": "iPad Studio View PWA for church service broadcast production",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

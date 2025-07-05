@@ -1,308 +1,349 @@
-# 🎬 Gudstjänst Production System
+# Gudstjänst – Open Production Toolkit
 
-**Production-grade broadcast management system för kyrkoTV-produktioner**
+This repository contains tooling, workflows and reference implementations developed in close proximity to Swedish public service production practices.
 
-Byggt av David Thåst för SVT:s gudstjänstproduktioner. Ett modernt, databas-drivet system som ersätter det gamla Excel-baserade arbetsflödet med en intelligent Google Sheets-lösning.
+The project was built to be practical, transparent and transferable — prioritising robustness, editorial clarity and long-term maintainability over short-term optimisation.
+
+It is now released publicly, in full, to ensure that the knowledge, patterns and solutions developed here remain accessible beyond any single production, contract or organisational context.
 
 ---
 
-## 🎯 **Filosofi**
+## Why This Is Public
 
-Detta system följer broadcast-standard: **deterministisk**, **pålitlig**, **läsbar under stress**.
+Public service production depends on continuity of knowledge, not ownership of tooling.
 
-### Arkitektoniska principer
-1. **Normaliserad databas** – Single source of truth i dolda sheets
-2. **Dynamiska vyer** – Presentationslager genererat via QUERY-formler
+Broadcasting workflows are cumulative by nature: they improve when patterns are shared, scrutinised and iterated across teams, generations and vendors.
+
+Releasing this repository publicly is therefore not a gesture, but a practical decision — aligned with the idea that publicly funded competence should, when possible, result in publicly accessible reference material.
+
+---
+
+## Philosophy
+
+This system follows broadcast standards: **deterministic**, **reliable**, **legible under pressure**.
+
+### Architectural Principles
+
+1. **Normalised database** – Single source of truth in hidden sheets
+2. **Dynamic views** – Presentation layer generated via QUERY formulae
 3. **Separation of concerns** – Data ≠ Presentation
-4. **Future-proof** – Förbered för API-integration (Companion/BMD/vMix)
-5. **Git-friendly** – Exporterbar till JSON för versionskontroll
+4. **Future-proof** – Prepared for API integration (Companion/BMD/vMix)
+5. **Git-friendly** – Exportable to JSON for version control
 
 ---
 
-## 📦 **Komponenter**
+## Components
 
-### Database Layer (dolda sheets, prefix `_DB_`)
-- **`_DB_Posts`** – Huvudregistret för alla poster (alla program)
-- **`_DB_Personer`** – Register över medverkande och personal
-- **`_DB_Program`** – Metadata för de 4 programmen per inspelningsplats
-- **`_DB_PostTyper`** – Templates för posttyper (predikan, sång, etc)
-- **`_DB_Logg`** – Timecode-loggning (append-only)
-- **`_DB_Settings`** – Systeminställningar
+### Database Layer (hidden sheets, prefix `_DB_`)
 
-### View Layer (synliga sheets)
-- **`Program 1-4`** – Ett blad per program (ersätter både Kort/Lång)
-- **`Inspelningsschema`** – Aggregerad vy över alla program, sorterad på dag/tid
-- **`Översikt`** – Dashboard med statistik
-- **`Kreditlista`** – Auto-genererad från _DB_Personer
+| Sheet | Purpose |
+|-------|---------|
+| `_DB_Posts` | Master registry for all posts (all programmes) |
+| `_DB_Personer` | Registry of contributors and crew |
+| `_DB_Program` | Metadata for the 4 programmes per recording location |
+| `_DB_PostTyper` | Templates for post types (sermon, hymn, etc.) |
+| `_DB_Logg` | Timecode logging (append-only) |
+| `_DB_Settings` | System settings |
+| `_DB_Audit` | Audit log (who changed what and when) |
+| `_DB_Trash` | Soft-deleted posts (recoverable) |
+
+### View Layer (visible sheets)
+
+| Sheet | Purpose |
+|-------|---------|
+| `Program 1–4` | One sheet per programme |
+| `Inspelningsschema` | Aggregated view across all programmes, sorted by day/time |
+| `Översikt` | Dashboard with statistics |
+| `Kreditlista` | Auto-generated from `_DB_Personer` |
 
 ### Apps Script Files
-- **`Config.gs`** – Konstanter, schema-definitioner, utility-funktioner
-- **`Database.gs`** – All CRUD-logik, databasoperationer
-- **`Views.gs`** – Vy-generering, QUERY-formler
-- **`UI.gs`** – Menyer, dialoger, användarinteraktion
-- **`Triggers.gs`** – Event handlers, API webhooks
+
+| File | Responsibility |
+|------|----------------|
+| `Config.gs` | Constants, schema definitions, utility functions |
+| `Database.gs` | All CRUD logic, database operations, caching, archiving |
+| `Views.gs` | View generation, QUERY formulae |
+| `UI.gs` | Menus, dialogues, user interaction |
+| `Triggers.gs` | Event handlers, API webhooks, rate limiting |
+| `Sync.gs` | Bi-directional synchronisation with external databases |
 
 ---
 
-## 🚀 **Installation**
+## Installation
 
-### 1. Skapa nytt Google Sheet
-```
-1. Öppna https://sheets.google.com
-2. Skapa nytt kalkylblad
-3. Namnge det (t.ex. "Gudstjänst Produktion - MARIAKYRKAN 2025")
-```
+### 1. Create a New Google Sheet
 
-### 2. Öppna Apps Script Editor
-```
-Tools > Script editor (eller Extensions > Apps Script)
-```
+1. Navigate to https://sheets.google.com
+2. Create a new spreadsheet
+3. Name it appropriately (e.g., "Church Service Production – VENUE 2025")
 
-### 3. Kopiera in filerna
+### 2. Open the Apps Script Editor
+
 ```
-1. Ta bort default Code.gs
-2. Skapa 5 nya filer:
-   - Config.gs
-   - Database.gs
-   - Views.gs
-   - UI.gs
-   - Triggers.gs
-3. Kopiera in koden från respektive fil från detta repo
-4. Spara projektet (Ctrl+S)
+Extensions > Apps Script
 ```
 
-### 4. Bootstrap databasen
-```
-1. Stäng Script Editor, gå tillbaka till spreadsheet
-2. Ladda om sidan (F5) så att custom menu dyker upp
-3. Välj: System > Bootstrap Database
-4. Bekräfta
-5. Vänta 10-20 sekunder
-```
+### 3. Copy the Script Files
 
-### 5. Generera vyer
+1. Delete the default `Code.gs`
+2. Create 6 new files:
+   - `Config.gs`
+   - `Database.gs`
+   - `Views.gs`
+   - `UI.gs`
+   - `Triggers.gs`
+   - `Sync.gs`
+3. Copy the code from each corresponding file in this repository
+4. Save the project (Ctrl+S)
+
+### 4. Bootstrap the Database
+
+1. Close the Script Editor and return to the spreadsheet
+2. Reload the page (F5) so the custom menu appears
+3. Select: **System > Bootstrap Database**
+4. Confirm the prompt
+5. Wait 10–20 seconds
+
+### 5. Generate Views
+
 ```
 System > Generate All Views
 ```
 
-**Klart!** Du har nu en fullt fungerande installation.
+**Complete.** You now have a fully functional installation.
 
 ---
 
-## 📖 **Användarguide**
+## User Guide
 
 ### Initial Setup
 
-#### 1. Konfigurera program-metadata
+#### 1. Configure Programme Metadata
+
 ```
-Inställningar > Redigera program­metadata
+Settings > Edit Programme Metadata
 ```
-Fyll i för varje program (1-4):
-- Plats (kyrkonamn)
-- Inspelningsstartdatum
-- Sändningsdatum
-- Kyrkoåret (t.ex. "2 i fastan")
-- Prod.nr
-- Måltid (sekunder, default 2610 = 43:30)
-- Starttid för Dag 1 (t.ex. "09:00:00")
 
-#### 2. Lägg till personer
+For each programme (1–4), enter:
+- Location (venue name)
+- Recording start date
+- Broadcast date
+- Liturgical season (e.g., "Second Sunday in Lent")
+- Production number
+- Target duration (seconds; default 2610 = 43:30)
+- Day 1 start time (e.g., "09:00:00")
+
+#### 2. Add Contributors
+
 ```
-Personer > Lägg till person
+People > Add Person
 ```
-- Fyll i namn, roller, kontakt
-- Typer: medverkande, team, kompositör, textförfattare
 
-### Skapa Poster
+- Enter name, roles, contact information
+- Types: contributor, crew, composer, lyricist
 
-#### Via meny (rekommenderat)
+### Creating Posts
+
+#### Via Menu (recommended)
+
 ```
-Poster > Lägg till ny post
+Posts > Add New Post
 ```
-Dialog öppnas där du fyller i:
-- **Program** (1-4)
-- **Posttyp** (välj från dropdown – default-duration sätts automatiskt)
-- **Innehåll** (huvudtext)
-- **Medverkande** (kommaseparerat, skapar personer automatiskt om nya)
-- **Plats** (dropdown)
-- **Inspelningsdag** (Dag 1/2/3)
-- **Anteckningar**
 
-#### Direkt i Program-vyn
-Du kan också redigera direkt i Program 1-4 vyerna:
-- Ändra celler → uppdateras automatiskt i databasen
-- Dropdowns för typ, plats, dag, status
-- Rullande tid beräknas automatiskt
+A dialogue opens where you enter:
+- **Programme** (1–4)
+- **Post type** (select from dropdown — default duration is set automatically)
+- **Content** (main text)
+- **Contributors** (comma-separated; new names are created automatically)
+- **Location** (dropdown)
+- **Recording day** (Day 1/2/3)
+- **Notes**
 
-### Posttyper (default templates)
+#### Directly in Programme View
 
-| Typ | Icon | Default tid | Beskrivning |
-|-----|------|-------------|-------------|
-| **Predikan** | 🎤 | 7:00 | Huvudpredikan |
-| **Textläsning** | 📖 | 1:30 | Bibelläsning |
-| **Sång (kör)** | 🎼 | 3:00 | Körsång |
-| **Sång (solo)** | 🎵 | 2:30 | Solosång |
-| **Orgelspel** | 🎹 | 2:00 | Instrumental |
-| **Liturgi** | ✝️ | 0:45 | Kyrie, Agnus Dei, etc |
-| **Förbön** | 🙏 | 2:00 | Församlingens förbön |
-| **Punktinfo** | 🎥 | 1:00 | Kort segment |
-| **Temapresentation** | 📺 | 2:30 | Längre presentation |
-| **Mellan-påa** | ⏸️ | 0:30 | Teknisk paus |
-| **Välsignelse** | 🙌 | 0:45 | Avslutning |
+You may also edit directly in the Programme 1–4 views:
+- Cell changes update the database automatically
+- Dropdowns for type, location, day, status
+- Rolling time is calculated automatically
 
-**Anpassa:**
+### Post Types (default templates)
+
+| Type | Icon | Default Duration | Description |
+|------|------|------------------|-------------|
+| **Sermon** | 🎤 | 7:00 | Main sermon |
+| **Scripture Reading** | 📖 | 1:30 | Bible reading |
+| **Hymn (choir)** | 🎼 | 3:00 | Choral piece |
+| **Hymn (solo)** | 🎵 | 2:30 | Solo vocal |
+| **Organ** | 🎹 | 2:00 | Instrumental |
+| **Liturgy** | ✝️ | 0:45 | Kyrie, Agnus Dei, etc. |
+| **Intercession** | 🙏 | 2:00 | Congregational prayer |
+| **Info segment** | 🎥 | 1:00 | Short segment |
+| **Theme presentation** | 📺 | 2:30 | Longer presentation |
+| **Interstitial** | ⏸️ | 0:30 | Technical pause |
+| **Benediction** | 🙌 | 0:45 | Closing blessing |
+
+**Customise:**
 ```
-Inställningar > Redigera posttyper
+Settings > Edit Post Types
 ```
-Lägg till egna typer med egna default-värden, färger, ikoner.
 
-### Inspelningsschema
+Add custom types with your own default values, colours and icons.
 
-Navigera till `Inspelningsschema`-bladet för att se:
-- **Alla poster från alla program** aggregerat
-- Sorterat på **Dag** → **Tid**
-- Färgkodning baserat på status
+### Recording Schedule
 
-Detta är den vy som används under inspelning.
+Navigate to the `Inspelningsschema` sheet to view:
+- **All posts from all programmes** aggregated
+- Sorted by **Day** → **Time**
+- Colour-coded by status
+
+This is the primary view used during recording sessions.
 
 ### Status Tracking
 
-#### Statusvärden
-- 🟢 **Planerad** (vit)
-- 🟡 **Spelar in** (gul)
-- 🟢 **Inspelad** (ljusgrön)
-- 🟢 **Godkänd** (mörkgrön)
+#### Status Values
 
-#### Uppdatera status
-1. **Manuellt:** Ändra status-kolumn direkt i vy
-2. **Via meny:**
-   - Markera rad
-   - `Produktion > Markera post som inspelad`
-3. **Via API** (framtida): Automatisk från Companion
+| Status | Colour | Meaning |
+|--------|--------|---------|
+| Planned | White | Not yet recorded |
+| Recording | Yellow | Currently being recorded |
+| Recorded | Light green | Recording complete |
+| Approved | Dark green | Approved for broadcast |
 
----
+#### Updating Status
 
-## 🔌 **API Integration (förbered, ej aktiverat än)**
-
-Systemet är förberett för integration med:
-- **Bitfocus Companion** (Stream Deck)
-- **Blackmagic Design HyperDeck**
-- **vMix**
-
-### Aktivering (framtida)
-```javascript
-// I Config.gs, sätt:
-API_CONFIG.ENABLED = true;
-
-// Deployas som Web App:
-Deploy > New deployment > Web app
-```
-
-### Endpoints (stubs finns i Triggers.gs)
-- `POST /api/timecode/in` – Logga TC-IN
-- `POST /api/timecode/out` – Logga TC-OUT
-- `POST /api/clip/next` – Hämta nästa klippnummer
-- `POST /api/post/status` – Uppdatera status
-
-### Companion Example (framtida)
-```json
-{
-  "action": "http_request",
-  "url": "https://script.google.com/macros/s/DEPLOY_ID/exec",
-  "method": "POST",
-  "body": {
-    "action": "tc_in",
-    "post_id": "$(internal:custom_PostID)",
-    "tc_in": "$(vmix:timecode)",
-    "operator": "David",
-    "clip_nr": "$(internal:custom_ClipCounter)"
-  }
-}
-```
+1. **Manually:** Change the status column directly in the view
+2. **Via menu:** Select a row, then `Production > Mark Post as Recorded`
+3. **Via API:** Automatic updates from Companion or other integrations
 
 ---
 
-## 🔧 **Avancerad användning**
+## API Integration
 
-### Export till JSON (för GitHub)
+The system includes a full REST API for integration with broadcast control systems.
+
+### Supported Integrations
+
+- **Bitfocus Companion** (Stream Deck automation)
+- **Blackmagic Design HyperDeck** (deck control)
+- **vMix** (video mixing software)
+- **Any HTTP client**
+
+### Deployment
+
+```
+Deploy > New Deployment > Web App
+```
+
+See [API.md](API.md) for complete endpoint documentation.
+
+### Security
+
+API authentication is configured via Script Properties:
+- `API_SECRET` – Master key for all access
+- Client-specific keys can be generated via **Integration > API Keys**
+
+---
+
+## Advanced Usage
+
+### Export to JSON (for version control)
+
 ```
 System > Backup to JSON
 ```
-Kopierar hela databasen till JSON-format. Spara i repo:
+
+Copies the entire database to JSON format. Save to your repository:
 ```
 data/backup_2025-10-22.json
 ```
 
-### Visa/Dölja databas-sheets
+### Show/Hide Database Sheets
+
 ```
 System > Show Database Sheets
 ```
-För manuell redigering eller debugging. **Var försiktig** – dessa är single source of truth.
 
-### Omnumrera poster
-```
-Poster > Omnumrera alla poster
-```
-Säkerställer att post-IDs är sekventiella (P1:1, P1:2, P1:3...).
+For manual editing or debugging. **Use with care** — these sheets are the single source of truth.
 
-### Flytta poster (ej implementerat än)
+### Renumber Posts
+
 ```
-Poster > Flytta post upp/ner
+Posts > Renumber All Posts
 ```
-TODO: Kommer swappa `sort_order` värden.
+
+Ensures post IDs are sequential (P1:1, P1:2, P1:3...).
+
+### Soft Delete and Recovery
+
+Deleted posts are moved to a recycle bin (`_DB_Trash`) and can be recovered:
+```
+Posts > Recycle Bin > View Deleted Posts
+```
+
+### Archiving
+
+Complete programmes can be archived to Google Drive:
+```
+Settings > Archive > Archive Programme 1
+```
+
+Archives are stored as JSON files in a `Gudstjänst_Arkiv` folder.
 
 ---
 
-## 📊 **Datamodell**
+## Data Model
 
-### Post (huvudentitet)
+### Post (primary entity)
+
 ```javascript
 {
-  post_id: "P1:10",           // Program 1, Post 10
-  program_nr: 1,              // 1-4
-  sort_order: 10,             // För sortering
-  type: "predikan",           // Posttyp-key
-  title: "Predikan om hopp",  // Huvudinnehåll
-  duration_sec: 420,          // 7 minuter
-  people_ids: "P001,P002",    // Kommaseparerade
-  location: "talarplats",
-  info_pos: "Kamera 1, nära",
-  graphics: "Namn underlägger",
-  notes: "Extra ljus behövs",
-  recording_day: "dag1",      // dag1/dag2/dag3
-  recording_time: "09:15:00", // Beräknad
-  status: "planerad",         // planerad/recording/inspelad/godkänd
-  text_author: "",            // För musik
-  composer: "",               // För musik
-  arranger: "",               // För musik
-  open_text: false,           // Visa i lång vy?
+  post_id: "P1:10",              // Programme 1, Post 10
+  program_nr: 1,                 // 1–4
+  sort_order: 10,                // For ordering
+  type: "predikan",              // Post type key
+  title: "Sermon on Hope",       // Main content
+  duration_sec: 420,             // 7 minutes
+  people_ids: "P001,P002",       // Comma-separated
+  location: "pulpit",
+  info_pos: "Camera 1, close-up",
+  graphics: "Name lower third",
+  notes: "Additional lighting required",
+  recording_day: "dag1",         // dag1/dag2/dag3
+  recording_time: "09:15:00",    // Calculated
+  status: "planerad",            // planerad/recording/inspelad/godkänd
+  text_author: "",               // For music
+  composer: "",                  // For music
+  arranger: "",                  // For music
+  open_text: false,              // Show in extended view?
   created: "2025-10-22T10:30:00Z",
   modified: "2025-10-22T14:20:00Z"
 }
 ```
 
 ### Person
+
 ```javascript
 {
   person_id: "P001",
   name: "Maria Löfgren",
-  roles: "predikant, liturg",
-  contact: "maria@exempel.se",
-  type: "medverkande",        // medverkande/team/kompositör/textförfattare
+  roles: "preacher, liturgist",
+  contact: "maria@example.com",
+  type: "contributor",           // contributor/crew/composer/lyricist
   created: "2025-10-22T09:00:00Z"
 }
 ```
 
-### Program
+### Programme
+
 ```javascript
 {
   program_nr: 1,
-  location: "MARIAKYRKAN VÄXJÖ",
+  location: "EXAMPLE CHURCH",
   start_date: "2025-01-30",
   broadcast_date: "2025-03-01",
-  church_year: "2 i fastan",
-  prod_nr: "SVT2025-GUD-001",
-  target_length_sec: 2610,    // 43:30
+  church_year: "Second Sunday in Lent",
+  prod_nr: "PROD-2025-001",
+  target_length_sec: 2610,       // 43:30
   start_time: "09:00:00",
   notes: "",
   created: "2025-10-22T08:00:00Z",
@@ -312,129 +353,165 @@ TODO: Kommer swappa `sort_order` värden.
 
 ---
 
-## 🎨 **Stilguide**
+## Architecture (2026 Edition)
 
-### Kod (British English)
+The system now supports a hybrid architecture with Supabase as an optional backend:
+
+```
+Google Sheets (UI + sharing)
+       │
+       ▼
+Cloudflare Worker (validation, conflict handling)
+       │
+       ▼
+Supabase (PostgreSQL with ACID, realtime, audit)
+       │
+       ▼
+iPad Studio PWA (touch-optimised studio view)
+```
+
+See [ARCHITECTURE-2026.md](ARCHITECTURE-2026.md) for full documentation.
+
+---
+
+## Style Guide
+
+### Code (British English)
+
 ```javascript
 // ✅ Correct
-colour, initialise, behaviour
+colour, initialise, behaviour, programme
 
 // ❌ Incorrect
-color, initialize, behavior
+color, initialize, behavior, program
 ```
 
-### Kommentarer (Svenska för kontext)
-```javascript
-// Beräkna rullande tid för alla poster i programmet
-// (Calculate rolling time for all posts in programme)
-```
+### Comments
 
-### Filstruktur
+All comments and documentation are in British English, following public service broadcasting conventions.
+
+### File Structure
+
 ```
-├── Config.gs          // Konstanter & konfiguration
-├── Database.gs        // CRUD-operationer
-├── Views.gs           // Vy-generering
-├── UI.gs              // Menyer & dialoger
-└── Triggers.gs        // Event handlers & API
+├── Config.gs          // Constants and configuration
+├── Database.gs        // CRUD operations
+├── Views.gs           // View generation
+├── UI.gs              // Menus and dialogues
+├── Triggers.gs        // Event handlers and API
+└── Sync.gs            // External synchronisation
 ```
 
 ---
 
-## 🐛 **Troubleshooting**
+## Troubleshooting
 
-### Problem: Custom menu dyker inte upp
-**Lösning:**
-1. Ladda om sidan (F5)
-2. Om fortfarande inte syns: kör `onOpen()` manuellt från Script Editor
+### Custom menu does not appear
 
-### Problem: "Database not initialised"
-**Lösning:**
-Kör `System > Bootstrap Database`
+**Solution:**
+1. Reload the page (F5)
+2. If still not visible: run `onOpen()` manually from the Script Editor
 
-### Problem: Vyer visar inte data
-**Lösning:**
-1. Kontrollera att databas-sheets finns och innehåller data
-2. Kör `System > Generate All Views` igen
-3. Kontrollera QUERY-formlerna (ska börja med `=QUERY(_DB_...`)
+### "Database not initialised" error
 
-### Problem: Edit i vy uppdaterar inte databasen
-**Lösning:**
-1. Kontrollera att triggers är installerade (kan köras från Script Editor)
-2. Kolla Script Editor > Executions för felmeddelanden
+**Solution:**
+Run `System > Bootstrap Database`
 
-### Problem: Performance (långsam)
+### Views do not display data
+
+**Solution:**
+1. Verify that database sheets exist and contain data
+2. Run `System > Generate All Views` again
+3. Check QUERY formulae (should begin with `=QUERY(_DB_...`)
+
+### Edits in view do not update the database
+
+**Solution:**
+1. Verify that triggers are installed
+2. Check Script Editor > Executions for error messages
+
+### Performance issues
+
 **Tips:**
-- Begränsa antal rader i QUERY (`LIMIT 100`)
-- Dölj oanvända sheets
-- Minimera conditional formatting rules
+- Limit rows in QUERY (`LIMIT 100`)
+- Hide unused sheets
+- Minimise conditional formatting rules
 
 ---
 
-## 🔮 **Roadmap**
+## Roadmap
 
-### Version 1.1 (nästa iteration)
-- [ ] Post reordering (drag & drop simulering)
-- [ ] Import från CSV/TSV
-- [ ] Export till Avid EDL
+### Version 1.1
+
+- [ ] Post reordering (drag-and-drop simulation)
+- [ ] Import from CSV/TSV
+- [ ] Export to Avid EDL
 - [ ] Bulk status update
 
-### Version 1.2 (Companion integration)
-- [ ] Aktivera API_CONFIG
-- [ ] Web app deployment
+### Version 1.2 (Companion Integration)
+
 - [ ] Companion button examples
-- [ ] Auto TC-logging från BMD
+- [ ] Automatic timecode logging from BMD
 
-### Version 2.0 (Advanced features)
-- [ ] Multi-camera TC tracking
-- [ ] Live countdown till nästa post
-- [ ] Google Calendar integration för kyrkobokning
-- [ ] SMS-notiser (via Twilio)
-- [ ] QR-codes för snabb scanning
+### Version 2.0 (Advanced Features)
 
----
-
-## 📝 **Licens & Credits**
-
-**Skapad av:** David Thåst  
-**För:** SVT Gudstjänstproduktioner  
-**År:** 2025  
-
-**Licens:** MIT (open source, modifiera fritt)
-
-**Tack till:**
-- SVT:s gamla Excel-system (inspiration & datamodell)
-- Broadcast-community för best practices
+- [ ] Multi-camera timecode tracking
+- [ ] Live countdown to next post
+- [ ] Google Calendar integration for venue booking
+- [ ] SMS notifications (via Twilio)
+- [ ] QR codes for rapid scanning
 
 ---
 
-## 🤝 **Kontribut
+## Licence and Credits
 
-Vill du förbättra systemet? Skicka pull requests!
+**Created by:** David Thåst
+**Context:** Swedish public service church broadcast production
+**Year:** 2025
 
-### Dev Setup
+**Licence:** MIT (open source, modify freely)
+
+**Acknowledgements:**
+- Legacy Excel-based production systems (inspiration and data model)
+- The broadcast community for best practices
+
+---
+
+## Contributing
+
+Contributions are welcome. Please submit pull requests.
+
+### Development Setup
+
 ```bash
-git clone https://github.com/FiLORUX/svt-gudstjanst
-cd svt-gudstjanst
+git clone https://github.com/FiLORUX/gudstjanst-production
+cd gudstjanst-production
 # Edit .gs files locally
 # Deploy via clasp (Google Apps Script CLI)
 clasp push
 ```
 
 ### Testing
-- Skapa test-data i separat spreadsheet
-- Testa CRUD-operationer
-- Verifiera QUERY-formler
-- Check performance med 100+ poster
+
+- Create test data in a separate spreadsheet
+- Test CRUD operations
+- Verify QUERY formulae
+- Check performance with 100+ posts
 
 ---
 
-## 📞 **Support**
+## Support
 
-**GitHub Issues:** https://github.com/FiLORUX/svt-gudstjanst/issues  
-**Email:** david@thast.se  
+**GitHub Issues:** https://github.com/FiLORUX/gudstjanst-production/issues
+**Email:** david@thast.se
 
-**Vanliga frågor:** Se [FAQ.md](FAQ.md) (skapas senare)
+**Frequently Asked Questions:** See [FAQ.md](FAQ.md)
 
 ---
 
-_Built with ❤️ for broadcast professionals_
+## Project History
+
+See [CONTEXT.md](CONTEXT.md)
+
+---
+
+_Built for broadcast professionals_

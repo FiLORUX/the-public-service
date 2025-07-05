@@ -1,6 +1,7 @@
 -- ============================================================================
--- SVT GUDSTJÄNST - SUPABASE SCHEMA
--- Modern PostgreSQL backend med full ACID, historik och realtime
+-- CHURCH SERVICE PRODUCTION - SUPABASE SCHEMA
+-- Modern PostgreSQL backend with full ACID, history and realtime
+-- Developed for Swedish public service broadcast production
 -- ============================================================================
 
 -- Enable UUID extension

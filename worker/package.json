@@ -1,5 +1,5 @@
 {
-  "name": "svt-gudstjanst-sync",
+  "name": "gudstjanst-sync",
   "version": "1.0.0",
   "description": "Cloudflare Worker for bi-directional sync between Google Sheets and Supabase",
   "main": "src/index.ts",

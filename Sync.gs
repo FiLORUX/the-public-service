@@ -592,7 +592,7 @@ function showSyncConfigDialog() {
 
     <div class="field">
       <label>Cloudflare Worker URL</label>
-      <input type="text" id="workerUrl" value="${currentUrl}" placeholder="https://svt-gudstjanst-sync.workers.dev">
+      <input type="text" id="workerUrl" value="${currentUrl}" placeholder="https://gudstjanst-sync.workers.dev">
       <div class="info">URL till din deployade Cloudflare Worker</div>
     </div>
 

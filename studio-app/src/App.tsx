@@ -295,7 +295,7 @@ export default function App() {
       {/* Header */}
       <header className="header">
         <div className="header-left">
-          <div className="logo">SVT Gudstjänst</div>
+          <div className="logo">Church Service</div>
           <div className="program-selector">
             {[1, 2, 3, 4].map(num => (
               <button
