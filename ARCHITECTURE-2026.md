@@ -241,7 +241,7 @@ vercel
 ## Files in This Repository
 
 ```
-gudstjanst-production/
+the-public-service/
 ├── supabase/
 │   └── schema.sql          # PostgreSQL schema with triggers
 ├── worker/

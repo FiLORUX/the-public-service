@@ -483,8 +483,8 @@ Contributions are welcome. Please submit pull requests.
 ### Development Setup
 
 ```bash
-git clone https://github.com/FiLORUX/gudstjanst-production
-cd gudstjanst-production
+git clone https://github.com/FiLORUX/the-public-service
+cd the-public-service
 # Edit .gs files locally
 # Deploy via clasp (Google Apps Script CLI)
 clasp push
@@ -501,7 +501,7 @@ clasp push
 
 ## Support
 
-**GitHub Issues:** https://github.com/FiLORUX/gudstjanst-production/issues
+**GitHub Issues:** https://github.com/FiLORUX/the-public-service/issues
 **Email:** david@thast.se
 
 **Frequently Asked Questions:** See [FAQ.md](FAQ.md)

@@ -181,7 +181,7 @@ The 2026 architecture: free (Supabase free tier, Cloudflare free tier, Vercel fr
 
 ### Where do I report bugs?
 
-GitHub Issues: https://github.com/FiLORUX/gudstjanst-production/issues
+GitHub Issues: https://github.com/FiLORUX/the-public-service/issues
 
 ### How do I request features?
 

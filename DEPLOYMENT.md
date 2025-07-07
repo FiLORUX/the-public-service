@@ -279,7 +279,7 @@ For teams requiring the advanced hybrid architecture (Supabase + Cloudflare Work
 
 ## Support
 
-**GitHub Issues:** https://github.com/FiLORUX/gudstjanst-production/issues
+**GitHub Issues:** https://github.com/FiLORUX/the-public-service/issues
 
 **Documentation:**
 - [README.md](README.md) – Overview and user guide
