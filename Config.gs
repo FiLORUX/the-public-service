@@ -2,7 +2,7 @@
  * THÅST GUDSTJÄNSTPRODUKTIONSSYSTEM
  * Configuration & Constants
  * 
- * British English throughout. Swedish comments where contextually relevant.
+ * Swedish comments where contextually relevant.
  * 
  * Architecture Philosophy:
  * - Normalised database in hidden sheets (single source of truth)

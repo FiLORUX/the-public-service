@@ -374,23 +374,7 @@ See [ARCHITECTURE-2026.md](ARCHITECTURE-2026.md) for full documentation.
 
 ---
 
-## Style Guide
-
-### Code (British English)
-
-```javascript
-// ✅ Correct
-colour, initialise, behaviour, programme
-
-// ❌ Incorrect
-color, initialize, behavior, program
-```
-
-### Comments
-
-All comments and documentation are in British English, following public service broadcasting conventions.
-
-### File Structure
+## File Structure
 
 ```
 ├── Config.gs          // Constants and configuration

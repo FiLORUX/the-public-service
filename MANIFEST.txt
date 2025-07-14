@@ -34,7 +34,7 @@ SUPPORT FILES:
   Total documentation:     ~2,000 lines
   Estimated deployment:    10 minutes
   Estimated learning:      30 minutes
-  Code language:           British English
+  Code language:           English
   Comments language:       Swedish (contextual)
   
 ═══════════════════════════════════════════════════════════════════════
