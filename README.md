@@ -254,7 +254,7 @@ System > Backup to JSON
 
 Copies the entire database to JSON format. Save to your repository:
 ```
-data/backup_2025-10-22.json
+data/backup_2025-01-01.json
 ```
 
 ### Show/Hide Database Sheets
@@ -315,8 +315,8 @@ Archives are stored as JSON files in a `Gudstjänst_Arkiv` folder.
   composer: "",                  // For music
   arranger: "",                  // For music
   open_text: false,              // Show in extended view?
-  created: "2025-10-22T10:30:00Z",
-  modified: "2025-10-22T14:20:00Z"
+  created: "2025-02-01T09:30:00Z",
+  modified: "2025-02-02T15:20:00Z"
 }
 ```
 
@@ -325,11 +325,11 @@ Archives are stored as JSON files in a `Gudstjänst_Arkiv` folder.
 ```javascript
 {
   person_id: "P001",
-  name: "Maria Löfgren",
+  name: "Namn Namnsson",
   roles: "preacher, liturgist",
-  contact: "maria@example.com",
+  contact: "namn@domän.com",
   type: "contributor",           // contributor/crew/composer/lyricist
-  created: "2025-10-22T09:00:00Z"
+  created: "2025-01-01T00:00:00Z"
 }
 ```
 
@@ -339,15 +339,15 @@ Archives are stored as JSON files in a `Gudstjänst_Arkiv` folder.
 {
   program_nr: 1,
   location: "EXAMPLE CHURCH",
-  start_date: "2025-01-30",
+  start_date: "2025-02-01",
   broadcast_date: "2025-03-01",
   church_year: "Second Sunday in Lent",
   prod_nr: "PROD-2025-001",
   target_length_sec: 2610,       // 43:30
-  start_time: "09:00:00",
+  start_time: "01:00:00",
   notes: "",
-  created: "2025-10-22T08:00:00Z",
-  modified: "2025-10-22T08:00:00Z"
+  created: "2025-02-01T09:00:00Z",
+  modified: "2025-02-01T17:00:00Z"
 }
 ```
 
@@ -455,7 +455,7 @@ Run `System > Bootstrap Database`
 **Licence:** MIT (open source, modify freely)
 
 **Acknowledgements:**
-- Legacy Excel-based production systems (inspiration and data model)
+- Legacy production systems (inspiration)
 - The broadcast community for best practices
 
 ---
