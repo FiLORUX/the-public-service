@@ -23,7 +23,7 @@ CREATE TYPE change_source AS ENUM ('sheets', 'api', 'studio', 'companion', 'syst
 CREATE TABLE programs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   program_nr INT NOT NULL UNIQUE CHECK (program_nr BETWEEN 1 AND 4),
-  location TEXT DEFAULT 'MARIAKYRKAN VÄXJÖ',
+  location TEXT DEFAULT 'Caroli-kyrkan, Borås',
   start_date DATE,
   broadcast_date DATE,
   church_year TEXT,  -- "2 i fastan", "Påskdagen" etc

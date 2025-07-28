@@ -280,7 +280,7 @@ function createDbSettingsSheet_() {
     ['last_bootstrap', getTimestamp_(), 'Last time database was bootstrapped'],
     ['api_enabled', 'false', 'Enable external API (Companion integration)'],
     ['default_start_time', '09:00:00', 'Default start time for Day 1 recording'],
-    ['location_name', 'MARIAKYRKAN VÄXJÖ', 'Current recording location']
+    ['location_name', 'Caroli-kyrkan, Borås', 'Current recording location']
   ];
   
   sheet.getRange(2, 1, initialSettings.length, 3).setValues(initialSettings);
@@ -567,10 +567,10 @@ function seedPrograms_() {
   
   // Create 4 empty programme entries
   const programData = [
-    [1, 'MARIAKYRKAN VÄXJÖ', '', '', '', '', 2610, '09:00:00', '', timestamp, timestamp],
-    [2, 'MARIAKYRKAN VÄXJÖ', '', '', '', '', 2610, '09:00:00', '', timestamp, timestamp],
-    [3, 'MARIAKYRKAN VÄXJÖ', '', '', '', '', 2610, '09:00:00', '', timestamp, timestamp],
-    [4, 'MARIAKYRKAN VÄXJÖ', '', '', '', '', 2610, '09:00:00', '', timestamp, timestamp]
+    [1, 'Caroli-kyrkan, Borås', '', '', '', '', 2610, '09:00:00', '', timestamp, timestamp],
+    [2, 'Caroli-kyrkan, Borås', '', '', '', '', 2610, '09:00:00', '', timestamp, timestamp],
+    [3, 'Caroli-kyrkan, Borås', '', '', '', '', 2610, '09:00:00', '', timestamp, timestamp],
+    [4, 'Caroli-kyrkan, Borås', '', '', '', '', 2610, '09:00:00', '', timestamp, timestamp]
   ];
   
   sheet.getRange(2, 1, programData.length, programData[0].length).setValues(programData);

@@ -27,7 +27,7 @@ Support:
 STEG 1: Skapa Google Sheet
   1. Gå till https://sheets.google.com
   2. Skapa nytt kalkylblad
-  3. Döp till "Gudstjänst Produktion - MARIAKYRKAN 2025"
+  3. Döp till "Gudstjänst Produktion - Caroli-kyrkan 2025"
 
 STEG 2: Öppna Apps Script Editor
   1. Extensions > Apps Script
