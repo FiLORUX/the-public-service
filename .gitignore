@@ -22,17 +22,32 @@ Thumbs.db
 *.bak
 *.log
 
-# Sensitive data (if any API keys stored locally)
+# Sensitive data
 secrets.json
 credentials.json
+.env
+.env.*
 
 # Build artifacts
 dist/
 build/
 
-# Backup files (keep in data/ but ignore if too large)
+# Backup files
 *.backup
 
 # Test data
 test/
 *.test.json
+
+# Studio app (TypeScript/Node)
+studio-app/node_modules/
+studio-app/dist/
+studio-app/.env
+
+# Worker (Cloudflare)
+worker/node_modules/
+worker/.dev.vars
+
+# Supabase
+supabase/.branches/
+supabase/.temp/
