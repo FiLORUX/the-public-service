@@ -51,3 +51,9 @@ worker/.dev.vars
 # Supabase
 supabase/.branches/
 supabase/.temp/
+
+# AI/LLM local settings
+.claude/
+.cursor/
+.aider/
+.continue/
