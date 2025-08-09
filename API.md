@@ -1,4 +1,4 @@
-# API Documentation - Gudstjänst Production System
+# API Documentation - Worship Service Production System
 
 ## Deployment
 
@@ -37,7 +37,7 @@ Expected response:
 ```json
 {
   "success": true,
-  "system": "Gudstjänst Production System",
+  "system": "Worship Service Production System",
   "version": "1.0.0",
   "timestamp": "2025-01-15T10:30:00.000Z",
   "endpoints": {
@@ -61,7 +61,7 @@ All GET requests use query parameters.
 |--------|-------------|------------|---------------|
 | `status` | System status and available endpoints | - | No |
 | `posts` | Get all posts for a program | `program` (1-4) | Yes |
-| `schedule` | Get recording schedule | `day` (dag1/dag2/dag3, optional) | Yes |
+| `schedule` | Get recording schedule | `day` (day1/day2/day3, optional) | Yes |
 | `post` | Get specific post | `post_id` | Yes |
 | `current` | Get currently recording post | - | Yes |
 | `clip_counter` | Get next clip number | - | Yes |
@@ -76,7 +76,7 @@ curl "https://YOUR_URL/exec?action=status"
 curl "https://YOUR_URL/exec?action=posts&program=1&api_key=YOUR_SECRET"
 
 # Get schedule for Day 1 (with auth)
-curl "https://YOUR_URL/exec?action=schedule&day=dag1&api_key=YOUR_SECRET"
+curl "https://YOUR_URL/exec?action=schedule&day=day1&api_key=YOUR_SECRET"
 
 # Get specific post (with auth)
 curl "https://YOUR_URL/exec?action=post&post_id=P1:5&api_key=YOUR_SECRET"
@@ -120,7 +120,7 @@ curl -X POST "https://YOUR_URL/exec" \
 # Get next post to record (with auth)
 curl -X POST "https://YOUR_URL/exec" \
   -H "Content-Type: application/json" \
-  -d '{"action": "get_next", "program_nr": 1, "recording_day": "dag1", "api_key": "YOUR_SECRET"}'
+  -d '{"action": "get_next", "program_nr": 1, "recording_day": "day1", "api_key": "YOUR_SECRET"}'
 ```
 
 ---
@@ -193,7 +193,7 @@ Body:
 {
   "action": "get_next",
   "program_nr": 1,
-  "recording_day": "dag1",
+  "recording_day": "day1",
   "api_key": "YOUR_SECRET"
 }
 ```
@@ -203,7 +203,7 @@ Body:
 Set up custom variables in Companion:
 - `current_post`: Currently selected post ID (e.g., "P1:5")
 - `current_program`: Current program number (1-4)
-- `recording_day`: Current recording day (dag1/dag2/dag3)
+- `recording_day`: Current recording day (day1/day2/day3)
 - `api_key`: Your API secret (store securely!)
 
 ---
@@ -268,7 +268,7 @@ All responses are JSON with this structure:
   "success": true,
   "message": "Operation completed",
   "post_id": "P1:5",
-  "status": "inspelad",
+  "status": "recorded",
   ...additional fields...
 }
 ```
@@ -278,7 +278,7 @@ All responses are JSON with this structure:
 {
   "success": false,
   "error": "Error description",
-  "valid_statuses": ["planerad", "recording", "inspelad", "godkand"]
+  "valid_statuses": ["scheduled", "recording", "recorded", "approved"]
 }
 ```
 
@@ -286,12 +286,12 @@ All responses are JSON with this structure:
 
 ## Status Values
 
-| Key | Display Name | Color | Description |
-|-----|--------------|-------|-------------|
-| `planerad` | Planerad | White | Not yet recorded |
-| `recording` | Spelar in | Yellow | Currently recording |
-| `inspelad` | Inspelad | Light Green | Recorded, needs approval |
-| `godkand` | Godkänd | Dark Green | Approved and done |
+| Key | Display Name | Colour | Description |
+|-----|--------------|--------|-------------|
+| `scheduled` | Scheduled | White | Not yet recorded |
+| `recording` | Recording | Yellow | Currently recording |
+| `recorded` | Recorded | Light Green | Recorded, needs approval |
+| `approved` | Approved | Dark Green | Approved and done |
 
 ---
 
@@ -302,16 +302,16 @@ All responses are JSON with this structure:
   "post_id": "P1:5",
   "program_nr": 1,
   "sort_order": 50,
-  "type": "predikan",
-  "title": "Predikan om hopp",
+  "type": "sermon",
+  "title": "Sermon on Hope",
   "duration_sec": 420,
   "duration_formatted": "00:07:00",
   "people_ids": "PXYZ123,PABC456",
-  "location": "talarplats",
-  "recording_day": "dag1",
+  "location": "pulpit",
+  "recording_day": "day1",
   "recording_time": "",
-  "status": "planerad",
-  "notes": "Extra ljus behövs"
+  "status": "scheduled",
+  "notes": "Additional lighting required"
 }
 ```
 
@@ -323,12 +323,12 @@ All responses are JSON with this structure:
 
 1. **Before session:** Get schedule
    ```bash
-   curl "https://URL/exec?action=schedule&day=dag1"
+   curl "https://URL/exec?action=schedule&day=day1"
    ```
 
 2. **Select first post:** Get next
    ```json
-   {"action": "get_next", "recording_day": "dag1"}
+   {"action": "get_next", "recording_day": "day1"}
    ```
 
 3. **Start recording:** TC-IN
