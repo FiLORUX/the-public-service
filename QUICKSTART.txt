@@ -2,114 +2,114 @@
   🎬 GUDSTJÄNST PRODUCTION SYSTEM - QUICK START
 ═══════════════════════════════════════════════════════════════════
 
-📦 FILER DU HAR FÅTT:
+📦 FILES INCLUDED:
 
-Apps Script (kopiera till Google Sheets Script Editor):
-  ✓ Config.gs          - Konfiguration & konstanter
-  ✓ Database.gs        - Databashantering
-  ✓ Views.gs           - Vy-generering  
-  ✓ UI.gs              - Menyer & dialoger
+Apps Script (copy to Google Sheets Script Editor):
+  ✓ Config.gs          - Configuration & constants
+  ✓ Database.gs        - Database handling
+  ✓ Views.gs           - View generation
+  ✓ UI.gs              - Menus & dialogues
   ✓ Triggers.gs        - Event handlers & API
 
-Dokumentation:
-  ✓ README.md          - Full dokumentation
-  ✓ DEPLOYMENT.md      - Deployment guide (läs denna först!)
-  ✓ SUMMARY.md         - Systemöversikt för dig
-  ✓ LICENSE            - MIT-licens
+Documentation:
+  ✓ README.md          - Full documentation
+  ✓ DEPLOYMENT.md      - Deployment guide (read this first!)
+  ✓ SUMMARY.md         - System overview
+  ✓ LICENSE            - MIT licence
 
 Support:
-  ✓ .gitignore         - För Git-repo
+  ✓ .gitignore         - For Git repository
 
 ═══════════════════════════════════════════════════════════════════
-  🚀 DEPLOYMENT (10 MINUTER)
+  🚀 DEPLOYMENT (10 MINUTES)
 ═══════════════════════════════════════════════════════════════════
 
-STEG 1: Skapa Google Sheet
-  1. Gå till https://sheets.google.com
-  2. Skapa nytt kalkylblad
-  3. Döp till "Gudstjänst Produktion - Caroli-kyrkan 2025"
+STEP 1: Create Google Sheet
+  1. Go to https://sheets.google.com
+  2. Create new spreadsheet
+  3. Name it "Worship Service Production - Caroli Church 2025"
 
-STEG 2: Öppna Apps Script Editor
+STEP 2: Open Apps Script Editor
   1. Extensions > Apps Script
-  2. Ta bort default Code.gs
+  2. Delete default Code.gs
 
-STEG 3: Kopiera in kod-filer
-  1. Skapa 5 nya script-filer (.gs)
-  2. Kopiera in innehållet från:
+STEP 3: Copy code files
+  1. Create 5 new script files (.gs)
+  2. Copy content from:
      - Config.gs
      - Database.gs
      - Views.gs
      - UI.gs
      - Triggers.gs
-  3. Spara (Ctrl+S)
+  3. Save (Ctrl+S)
 
-STEG 4: Bootstrap
-  1. Stäng Script Editor, gå tillbaka till Sheet
-  2. Ladda om (F5)
+STEP 4: Bootstrap
+  1. Close Script Editor, return to Sheet
+  2. Reload (F5)
   3. System > Bootstrap Database
-  4. Bekräfta
-  5. Vänta 10-20 sekunder
+  4. Confirm
+  5. Wait 10-20 seconds
 
-STEG 5: Generera vyer
+STEP 5: Generate views
   1. System > Generate All Views
-  2. Vänta 5-10 sekunder
+  2. Wait 5-10 seconds
 
-✅ KLART! Du har nu:
-  • 6 dolda database sheets (_DB_*)
-  • 4 program-vyer (Program 1-4)
-  • 1 inspelningsschema
-  • 1 översikt-dashboard
-  • 1 kreditlista
-
-═══════════════════════════════════════════════════════════════════
-  📖 LÄS VIDARE
-═══════════════════════════════════════════════════════════════════
-
-DEPLOYMENT.md    - Steg-för-steg installation med screenshots
-SUMMARY.md       - Systemöversikt, arkitektur, jämförelser
-README.md        - Full användarguide och dokumentation
+✅ DONE! You now have:
+  • 6 hidden database sheets (_DB_*)
+  • 4 programme views (Programme 1-4)
+  • 1 recording schedule
+  • 1 overview dashboard
+  • 1 credits list
 
 ═══════════════════════════════════════════════════════════════════
-  🎯 NÄSTA STEG
+  📖 FURTHER READING
 ═══════════════════════════════════════════════════════════════════
 
-1. Konfigurera program-metadata:
-   Inställningar > Redigera program­metadata
+DEPLOYMENT.md    - Step-by-step installation with screenshots
+SUMMARY.md       - System overview, architecture, comparisons
+README.md        - Full user guide and documentation
 
-2. Lägg till personer:
-   Personer > Lägg till person
+═══════════════════════════════════════════════════════════════════
+  🎯 NEXT STEPS
+═══════════════════════════════════════════════════════════════════
 
-3. Skapa första posten:
-   Poster > Lägg till ny post
+1. Configure programme metadata:
+   Settings > Edit programme metadata
 
-4. Testa arbetsflödet!
+2. Add people:
+   People > Add person
+
+3. Create first post:
+   Posts > Add new post
+
+4. Test the workflow!
 
 ═══════════════════════════════════════════════════════════════════
   💡 TIPS
 ═══════════════════════════════════════════════════════════════════
 
-• Databas-sheets är dolda (men inte låsta)
-• Redigera ALLTID via vyer, inte direkt i databas
-• Rullande tid beräknas automatiskt
-• Status färgkodas: gul = spelar in, grön = klart
-• Backup regelbundet: System > Backup to JSON
+• Database sheets are hidden (but not locked)
+• ALWAYS edit via views, not directly in database
+• Running time is calculated automatically
+• Status colour-coded: yellow = recording, green = complete
+• Back up regularly: System > Backup to JSON
 
 ═══════════════════════════════════════════════════════════════════
-  🆘 PROBLEM?
+  🆘 PROBLEMS?
 ═══════════════════════════════════════════════════════════════════
 
-Läs DEPLOYMENT.md sektion "Troubleshooting"
+Read DEPLOYMENT.md section "Troubleshooting"
 
-Vanligaste felen:
-  • Menu dyker inte upp → Ladda om (F5)
-  • Bootstrap fails → Kontrollera alla 5 .gs filer finns
-  • Views tomma → Kör Bootstrap igen
+Common issues:
+  • Menu doesn't appear → Reload (F5)
+  • Bootstrap fails → Check all 5 .gs files exist
+  • Views empty → Run Bootstrap again
 
 ═══════════════════════════════════════════════════════════════════
   📞 SUPPORT
 ═══════════════════════════════════════════════════════════════════
 
-GitHub: https://github.com/davidthast/gudstjanst-system
+GitHub: https://github.com/FiLORUX/the-public-service
 Email: david@thast.se
 
 ═══════════════════════════════════════════════════════════════════
