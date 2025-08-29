@@ -1,6 +1,6 @@
 ═══════════════════════════════════════════════════════════════════════
   GUDSTJÄNST PRODUCTION SYSTEM v1.0.0
-  Created by David Thåst - 2025-10-22
+  Created by David Thåst - 2025-08-03
 ═══════════════════════════════════════════════════════════════════════
 
 📦 PACKAGE CONTENTS:
@@ -148,15 +148,15 @@ SUPPORT FILES:
 
 🆘 SUPPORT:
 
-  GitHub:  https://github.com/davidthast/gudstjanst-system
-  Issues:  https://github.com/davidthast/gudstjanst-system/issues
+  GitHub:  https://github.com/FiLORUX/the-public-service
+  Issues:  https://github.com/FiLORUX/the-public-service/issues
   Email:   david@thast.se
   
 ═══════════════════════════════════════════════════════════════════════
 
 📝 VERSION HISTORY:
 
-  v1.0.0 (2025-10-22) - Initial release
+  v1.0.0 (2025-08-03) - Initial release
   • Complete database-driven architecture
   • 4 programme views + schedule + overview + credits
   • 11 default post types with templates
@@ -182,6 +182,6 @@ Built with ❤️ for broadcast excellence
 
 David Thåst
 Broadcast Engineer, Director, Creative Technologist
-2025-10-22
+2025-08-03
 
 ═══════════════════════════════════════════════════════════════════════
