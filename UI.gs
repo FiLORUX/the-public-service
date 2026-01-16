@@ -1,6 +1,6 @@
 /**
  * USER INTERFACE LAYER
- * 
+ *
  * Custom menus, dialogues, and user interactions.
  * This provides the "control panel" for the system.
  */
@@ -14,90 +14,99 @@
  * This is automatically called by onOpen trigger
  */
 function onOpen() {
-  const ui = SpreadsheetApp.getUi();
-  
+  const ui = SpreadsheetApp.getUi()
+
   ui.createMenu('📋 System')
     .addItem('🚀 Bootstrap Database', 'bootstrapDatabase')
     .addItem('🔄 Generate All Views', 'generateAllViews')
     .addSeparator()
     .addItem('👁️ Show Database Sheets', 'showDbSheets')
     .addSeparator()
-    .addSubMenu(ui.createMenu('💾 Backup & Restore')
-      .addItem('📤 Exportera till JSON', 'exportDatabaseToJson')
-      .addItem('💾 Skapa backup nu', 'runBackupNow')
-      .addItem('🔄 Återställ från backup', 'showRestoreDialog')
-      .addSeparator()
-      .addItem('⏰ Aktivera automatisk backup', 'installBackupTriggers')
-      .addItem('🚫 Avaktivera automatisk backup', 'removeBackupTriggers'))
+    .addSubMenu(
+      ui
+        .createMenu('💾 Backup & Restore')
+        .addItem('📤 Export to JSON', 'exportDatabaseToJson')
+        .addItem('💾 Create backup now', 'runBackupNow')
+        .addItem('🔄 Restore from backup', 'showRestoreDialog')
+        .addSeparator()
+        .addItem('⏰ Enable automatic backup', 'installBackupTriggers')
+        .addItem('🚫 Disable automatic backup', 'removeBackupTriggers'),
+    )
     .addSeparator()
     .addItem('📖 Documentation', 'showDocumentation')
     .addItem('ℹ️ About', 'showAbout')
-    .addToUi();
-  
-  ui.createMenu('📝 Poster')
-    .addItem('➕ Lägg till ny post', 'showAddPostDialog')
-    .addItem('📋 Import poster (CSV/TSV)', 'showImportDialog')
-    .addSeparator()
-    .addItem('🗑️ Radera vald post', 'deleteCurrentPost')
-    .addItem('⬆️ Flytta post upp', 'movePostUp')
-    .addItem('⬇️ Flytta post ner', 'movePostDown')
-    .addSeparator()
-    .addItem('🔢 Omnumrera alla poster', 'renumberAllPosts')
-    .addSeparator()
-    .addSubMenu(ui.createMenu('🗑️ Papperskorg')
-      .addItem('📋 Visa borttagna poster', 'showTrashDialog')
-      .addItem('♻️ Töm papperskorgen', 'emptyTrash'))
-    .addToUi();
-  
-  ui.createMenu('👥 Personer')
-    .addItem('➕ Lägg till person', 'showAddPersonDialog')
-    .addItem('📋 Visa alla personer', 'showPeopleList')
-    .addToUi();
-  
-  ui.createMenu('🎬 Produktion')
-    .addItem('📅 Visa inspelningsschema', 'goToScheduleView')
-    .addItem('📊 Visa översikt', 'goToOverviewView')
-    .addItem('📜 Visa kreditlista', 'goToCreditsView')
-    .addSeparator()
-    .addItem('🎯 Gå till aktiv inspelning', 'goToCurrentPost')
-    .addItem('📍 Visa inspelningsstatus', 'showRecordingStatus')
-    .addSeparator()
-    .addItem('⏺️ Markera post som spelar in', 'markCurrentPostRecording')
-    .addItem('✅ Markera post som inspelad', 'markCurrentPostRecorded')
-    .addItem('👍 Markera post som godkänd', 'markCurrentPostApproved')
-    .addToUi();
-  
-  ui.createMenu('🔗 Integration')
-    .addItem('📊 Visa sync-status', 'showSyncStatusDialog')
-    .addItem('⚙️ Konfigurera Supabase sync', 'showSyncConfigDialog')
-    .addSeparator()
-    .addItem('🔑 Visa API-nycklar', 'showExternalApiDialog')
-    .addItem('🔄 Generera ny API-nyckel', 'generateNewApiKey')
-    .addSeparator()
-    .addItem('📤 Full sync till Supabase', 'fullSyncToSupabase')
-    .addItem('📥 Hämta från Supabase', 'pullAllFromSupabase')
-    .addSeparator()
-    .addItem('🧪 Testa API-anslutning', 'testApiConnection')
-    .addToUi();
+    .addToUi()
 
-  ui.createMenu('⚙️ Inställningar')
-    .addItem('🎨 Redigera posttyper', 'goToPostTypesSheet')
-    .addItem('📝 Redigera program­metadata', 'goToProgramsSheet')
-    .addItem('🔧 System­inställningar', 'showSettingsDialog')
+  ui.createMenu('📝 Posts')
+    .addItem('➕ Add new post', 'showAddPostDialog')
+    .addItem('📋 Import posts (CSV/TSV)', 'showImportDialog')
     .addSeparator()
-    .addSubMenu(ui.createMenu('📦 Arkivering')
-      .addItem('📦 Arkivera Program 1', 'archiveProgram1')
-      .addItem('📦 Arkivera Program 2', 'archiveProgram2')
-      .addItem('📦 Arkivera Program 3', 'archiveProgram3')
-      .addItem('📦 Arkivera Program 4', 'archiveProgram4')
-      .addSeparator()
-      .addItem('🔄 Arkivera & rensa Program 1', 'archiveAndClearProgram1')
-      .addItem('🔄 Arkivera & rensa Program 2', 'archiveAndClearProgram2')
-      .addItem('🔄 Arkivera & rensa Program 3', 'archiveAndClearProgram3')
-      .addItem('🔄 Arkivera & rensa Program 4', 'archiveAndClearProgram4'))
+    .addItem('🗑️ Delete selected post', 'deleteCurrentPost')
+    .addItem('⬆️ Move post up', 'movePostUp')
+    .addItem('⬇️ Move post down', 'movePostDown')
     .addSeparator()
-    .addItem('🗑️ Rensa cache', 'invalidateAllCaches')
-    .addToUi();
+    .addItem('🔢 Renumber all posts', 'renumberAllPosts')
+    .addSeparator()
+    .addSubMenu(
+      ui
+        .createMenu('🗑️ Recycle Bin')
+        .addItem('📋 View deleted posts', 'showTrashDialog')
+        .addItem('♻️ Empty recycle bin', 'emptyTrash'),
+    )
+    .addToUi()
+
+  ui.createMenu('👥 People')
+    .addItem('➕ Add person', 'showAddPersonDialog')
+    .addItem('📋 View all people', 'showPeopleList')
+    .addToUi()
+
+  ui.createMenu('🎬 Production')
+    .addItem('📅 View recording schedule', 'goToScheduleView')
+    .addItem('📊 View overview', 'goToOverviewView')
+    .addItem('📜 View credits', 'goToCreditsView')
+    .addSeparator()
+    .addItem('🎯 Go to active recording', 'goToCurrentPost')
+    .addItem('📍 Show recording status', 'showRecordingStatus')
+    .addSeparator()
+    .addItem('⏺️ Mark post as recording', 'markCurrentPostRecording')
+    .addItem('✅ Mark post as recorded', 'markCurrentPostRecorded')
+    .addItem('👍 Mark post as approved', 'markCurrentPostApproved')
+    .addToUi()
+
+  ui.createMenu('🔗 Integration')
+    .addItem('📊 View sync status', 'showSyncStatusDialog')
+    .addItem('⚙️ Configure Supabase sync', 'showSyncConfigDialog')
+    .addSeparator()
+    .addItem('🔑 View API keys', 'showExternalApiDialog')
+    .addItem('🔄 Generate new API key', 'generateNewApiKey')
+    .addSeparator()
+    .addItem('📤 Full sync to Supabase', 'fullSyncToSupabase')
+    .addItem('📥 Pull from Supabase', 'pullAllFromSupabase')
+    .addSeparator()
+    .addItem('🧪 Test API connection', 'testApiConnection')
+    .addToUi()
+
+  ui.createMenu('⚙️ Settings')
+    .addItem('🎨 Edit post types', 'goToPostTypesSheet')
+    .addItem('📝 Edit programme metadata', 'goToProgramsSheet')
+    .addItem('🔧 System settings', 'showSettingsDialog')
+    .addSeparator()
+    .addSubMenu(
+      ui
+        .createMenu('📦 Archiving')
+        .addItem('📦 Archive Programme 1', 'archiveProgram1')
+        .addItem('📦 Archive Programme 2', 'archiveProgram2')
+        .addItem('📦 Archive Programme 3', 'archiveProgram3')
+        .addItem('📦 Archive Programme 4', 'archiveProgram4')
+        .addSeparator()
+        .addItem('🔄 Archive & clear Programme 1', 'archiveAndClearProgram1')
+        .addItem('🔄 Archive & clear Programme 2', 'archiveAndClearProgram2')
+        .addItem('🔄 Archive & clear Programme 3', 'archiveAndClearProgram3')
+        .addItem('🔄 Archive & clear Programme 4', 'archiveAndClearProgram4'),
+    )
+    .addSeparator()
+    .addItem('🗑️ Clear cache', 'invalidateAllCaches')
+    .addToUi()
 }
 
 // ============================================================================
@@ -108,24 +117,25 @@ function onOpen() {
  * Show dialogue for adding new post
  */
 function showAddPostDialog() {
-  const ui = SpreadsheetApp.getUi();
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const activeSheet = ss.getActiveSheet();
-  
+  const ui = SpreadsheetApp.getUi()
+  const ss = SpreadsheetApp.getActiveSpreadsheet()
+  const activeSheet = ss.getActiveSheet()
+
   // Determine which programme we're in
-  const sheetName = activeSheet.getName();
-  const match = sheetName.match(/Program (\d)/);
-  
-  let defaultProgramNr = 1;
+  const sheetName = activeSheet.getName()
+  const match = sheetName.match(/Program (\d)/)
+
+  let defaultProgramNr = 1
   if (match) {
-    defaultProgramNr = parseInt(match[1], 10);
+    defaultProgramNr = parseInt(match[1], 10)
   }
-  
+
   // Get post types for dropdown
-  const postTypes = getAllPostTypes_();
-  const typeNames = postTypes.map(pt => pt[POST_TYPE_SCHEMA.DISPLAY_NAME]).join('\\n');
-  
-  const html = HtmlService.createHtmlOutput(`
+  const postTypes = getAllPostTypes_()
+  const typeNames = postTypes.map((pt) => pt[POST_TYPE_SCHEMA.DISPLAY_NAME]).join('\\n')
+
+  const html = HtmlService.createHtmlOutput(
+    `
     <style>
       body {
         font-family: 'Roboto', Arial, sans-serif;
@@ -174,45 +184,45 @@ function showAddPostDialog() {
       }
     </style>
     
-    <h2>Lägg till ny post</h2>
-    
-    <label>Program *</label>
+    <h2>Add new post</h2>
+
+    <label>Programme *</label>
     <select id="program">
-      <option value="1" ${defaultProgramNr === 1 ? 'selected' : ''}>Program 1</option>
-      <option value="2" ${defaultProgramNr === 2 ? 'selected' : ''}>Program 2</option>
-      <option value="3" ${defaultProgramNr === 3 ? 'selected' : ''}>Program 3</option>
-      <option value="4" ${defaultProgramNr === 4 ? 'selected' : ''}>Program 4</option>
+      <option value="1" ${defaultProgramNr === 1 ? 'selected' : ''}>Programme 1</option>
+      <option value="2" ${defaultProgramNr === 2 ? 'selected' : ''}>Programme 2</option>
+      <option value="3" ${defaultProgramNr === 3 ? 'selected' : ''}>Programme 3</option>
+      <option value="4" ${defaultProgramNr === 4 ? 'selected' : ''}>Programme 4</option>
     </select>
-    
-    <label>Posttyp *</label>
+
+    <label>Post type *</label>
     <select id="type">
-      ${postTypes.map(pt => `<option value="${pt[POST_TYPE_SCHEMA.TYPE_KEY]}">${pt[POST_TYPE_SCHEMA.ICON]} ${pt[POST_TYPE_SCHEMA.DISPLAY_NAME]}</option>`).join('')}
+      ${postTypes.map((pt) => `<option value="${pt[POST_TYPE_SCHEMA.TYPE_KEY]}">${pt[POST_TYPE_SCHEMA.ICON]} ${pt[POST_TYPE_SCHEMA.DISPLAY_NAME]}</option>`).join('')}
     </select>
-    
-    <label>Innehåll *</label>
-    <textarea id="title" placeholder="T.ex. 'Predikan om hopp'"></textarea>
-    
-    <label>Medverkande (kommaseparerat)</label>
-    <input type="text" id="people" placeholder="T.ex. 'Maria Löfgren, Victor Hjort'" />
-    
-    <label>Plats</label>
+
+    <label>Content *</label>
+    <textarea id="title" placeholder="E.g. 'Sermon on hope'"></textarea>
+
+    <label>Participants (comma-separated)</label>
+    <input type="text" id="people" placeholder="E.g. 'Mary Smith, John Jones'" />
+
+    <label>Location</label>
     <select id="location">
-      <option value="">- Välj plats -</option>
-      ${LOCATIONS.map(loc => `<option value="${loc}">${loc}</option>`).join('')}
+      <option value="">- Select location -</option>
+      ${LOCATIONS.map((loc) => `<option value="${loc}">${loc}</option>`).join('')}
     </select>
-    
-    <label>Inspelningsdag</label>
+
+    <label>Recording day</label>
     <select id="recording_day">
-      <option value="dag1">Dag 1 - Textläsning & Predikan</option>
-      <option value="dag2">Dag 2 - Musik & Kör</option>
-      <option value="dag3">Dag 3 - Församling (helhet)</option>
+      <option value="day1">Day 1 - Scripture Reading & Sermon</option>
+      <option value="day2">Day 2 - Music & Choir</option>
+      <option value="day3">Day 3 - Congregation (full service)</option>
     </select>
-    
-    <label>Anteckningar</label>
-    <textarea id="notes" placeholder="Övrig info om posten"></textarea>
-    
-    <button onclick="savePost()">Skapa post</button>
-    <button class="cancel-btn" onclick="google.script.host.close()">Avbryt</button>
+
+    <label>Notes</label>
+    <textarea id="notes" placeholder="Additional notes about the post"></textarea>
+
+    <button onclick="savePost()">Create post</button>
+    <button class="cancel-btn" onclick="google.script.host.close()">Cancel</button>
     
     <script>
       function savePost() {
@@ -227,26 +237,27 @@ function showAddPostDialog() {
         };
         
         if (!data.title) {
-          alert('Innehåll måste anges');
+          alert('Content must be specified');
           return;
         }
-        
+
         google.script.run
           .withSuccessHandler(() => {
-            alert('Post skapad!');
+            alert('Post created!');
             google.script.host.close();
           })
           .withFailureHandler((error) => {
-            alert('Fel: ' + error.message);
+            alert('Error: ' + error.message);
           })
           .createPostFromDialog(data);
       }
     </script>
-  `)
+  `,
+  )
     .setWidth(500)
-    .setHeight(650);
-  
-  ui.showModalDialog(html, 'Ny post');
+    .setHeight(650)
+
+  ui.showModalDialog(html, 'New post')
 }
 
 /**
@@ -260,49 +271,52 @@ function createPostFromDialog(data) {
     title: data.title,
     notes: data.notes,
     location: data.location,
-    recording_day: data.recording_day
-  });
-  
+    recording_day: data.recording_day,
+  })
+
   // Handle people (create if new)
   if (data.people) {
-    const peopleNames = data.people.split(',').map(n => n.trim()).filter(n => n);
-    const peopleIds = [];
-    
-    peopleNames.forEach(name => {
+    const peopleNames = data.people
+      .split(',')
+      .map((n) => n.trim())
+      .filter((n) => n)
+    const peopleIds = []
+
+    peopleNames.forEach((name) => {
       // Check if person exists
-      const existing = findPersonByName_(name);
+      const existing = findPersonByName_(name)
       if (existing) {
-        peopleIds.push(existing[PERSON_SCHEMA.ID]);
+        peopleIds.push(existing[PERSON_SCHEMA.ID])
       } else {
         // Create new person
-        const newId = createPerson({ name: name });
-        peopleIds.push(newId);
+        const newId = createPerson({ name: name })
+        peopleIds.push(newId)
       }
-    });
-    
+    })
+
     // Update post with people IDs
     if (peopleIds.length > 0) {
-      updatePost(postId, { people_ids: peopleIds.join(',') }, 'ui');
+      updatePost(postId, { people_ids: peopleIds.join(',') }, 'ui')
     }
   }
-  
+
   // Refresh view
-  refreshProgramView(data.program_nr);
-  
-  return postId;
+  refreshProgramView(data.program_nr)
+
+  return postId
 }
 
 /**
  * Find person by name (helper)
  */
 function findPersonByName_(name) {
-  const people = getAllPeople_();
+  const people = getAllPeople_()
   for (let person of people) {
     if (person[PERSON_SCHEMA.NAME].toLowerCase() === name.toLowerCase()) {
-      return person;
+      return person
     }
   }
-  return null;
+  return null
 }
 
 // ============================================================================
@@ -313,9 +327,10 @@ function findPersonByName_(name) {
  * Show dialog for importing posts from CSV/TSV
  */
 function showImportDialog() {
-  const ui = SpreadsheetApp.getUi();
+  const ui = SpreadsheetApp.getUi()
 
-  const html = HtmlService.createHtmlOutput(`
+  const html = HtmlService.createHtmlOutput(
+    `
     <style>
       body {
         font-family: 'Roboto', Arial, sans-serif;
@@ -401,37 +416,37 @@ function showImportDialog() {
       }
     </style>
 
-    <h2>📋 Importera poster</h2>
+    <h2>📋 Import posts</h2>
 
-    <label>Program att importera till</label>
+    <label>Programme to import to</label>
     <select id="program">
-      <option value="1">Program 1</option>
-      <option value="2">Program 2</option>
-      <option value="3">Program 3</option>
-      <option value="4">Program 4</option>
+      <option value="1">Programme 1</option>
+      <option value="2">Programme 2</option>
+      <option value="3">Programme 3</option>
+      <option value="4">Programme 4</option>
     </select>
 
     <label>Format</label>
     <select id="format">
-      <option value="tsv">TSV (tab-separerat)</option>
-      <option value="csv">CSV (komma-separerat)</option>
+      <option value="tsv">TSV (tab-separated)</option>
+      <option value="csv">CSV (comma-separated)</option>
     </select>
 
     <div class="format-box">
-      <strong>Förväntat format (en rad per post):</strong><br>
-      <code>typ</code> <code>innehåll</code> <code>medverkande</code> <code>duration</code> <code>plats</code> <code>dag</code> <code>anteckningar</code><br><br>
-      <strong>Exempel (TSV):</strong><br>
-      <code>predikan&emsp;Predikan om kärlek&emsp;Maria Löfgren&emsp;7:00&emsp;talarplats&emsp;dag1&emsp;</code>
+      <strong>Expected format (one row per post):</strong><br>
+      <code>type</code> <code>content</code> <code>participants</code> <code>duration</code> <code>location</code> <code>day</code> <code>notes</code><br><br>
+      <strong>Example (TSV):</strong><br>
+      <code>sermon&emsp;Sermon on love&emsp;Mary Smith&emsp;7:00&emsp;pulpit&emsp;day1&emsp;</code>
     </div>
 
-    <label>Klistra in data</label>
-    <textarea id="data" placeholder="Klistra in dina poster här (en rad per post)..."></textarea>
-    <div class="help-text">Tips: Kopiera direkt från Excel eller Google Sheets</div>
+    <label>Paste data</label>
+    <textarea id="data" placeholder="Paste your posts here (one row per post)..."></textarea>
+    <div class="help-text">Tip: Copy directly from Excel or Google Sheets</div>
 
     <div id="result" class="result"></div>
 
-    <button onclick="importData()">Importera</button>
-    <button class="cancel-btn" onclick="google.script.host.close()">Avbryt</button>
+    <button onclick="importData()">Import</button>
+    <button class="cancel-btn" onclick="google.script.host.close()">Cancel</button>
 
     <script>
       function importData() {
@@ -442,11 +457,11 @@ function showImportDialog() {
         };
 
         if (!data.data) {
-          showResult('Ingen data att importera', true);
+          showResult('No data to import', true);
           return;
         }
 
-        document.getElementById('result').innerHTML = 'Importerar...';
+        document.getElementById('result').innerHTML = 'Importing...';
         document.getElementById('result').className = 'result success';
 
         google.script.run
@@ -457,7 +472,7 @@ function showImportDialog() {
             }
           })
           .withFailureHandler((error) => {
-            showResult('Fel: ' + error.message, true);
+            showResult('Error: ' + error.message, true);
           })
           .importPostsFromDialog(data);
       }
@@ -468,96 +483,100 @@ function showImportDialog() {
         el.className = 'result ' + (isError ? 'error' : 'success');
       }
     </script>
-  `)
+  `,
+  )
     .setWidth(600)
-    .setHeight(650);
+    .setHeight(650)
 
-  ui.showModalDialog(html, 'Importera poster');
+  ui.showModalDialog(html, 'Import posts')
 }
 
 /**
  * Server-side function to import posts from dialog
  */
 function importPostsFromDialog(data) {
-  const { program_nr, format, data: rawData } = data;
+  const { program_nr, format, data: rawData } = data
 
   // Parse the data
-  const delimiter = format === 'csv' ? ',' : '\t';
-  const lines = rawData.split('\n').filter(line => line.trim());
+  const delimiter = format === 'csv' ? ',' : '\t'
+  const lines = rawData.split('\n').filter((line) => line.trim())
 
   if (lines.length === 0) {
-    return { success: false, message: 'Ingen data att importera' };
+    return { success: false, message: 'No data to import' }
   }
 
-  let imported = 0;
-  let errors = [];
+  let imported = 0
+  let errors = []
 
   lines.forEach((line, index) => {
     try {
-      const parts = line.split(delimiter);
+      const parts = line.split(delimiter)
 
-      // Expected: typ, innehåll, medverkande, duration, plats, dag, anteckningar
+      // Expected: type, content, participants, duration, location, day, notes
       const postData = {
         program_nr: program_nr,
-        type: (parts[0] || 'liturgi').trim().toLowerCase(),
+        type: (parts[0] || 'liturgy').trim().toLowerCase(),
         title: (parts[1] || '').trim(),
-        recording_day: (parts[5] || 'dag1').trim().toLowerCase(),
+        recording_day: (parts[5] || 'day1').trim().toLowerCase(),
         location: (parts[4] || '').trim(),
-        notes: (parts[6] || '').trim()
-      };
+        notes: (parts[6] || '').trim(),
+      }
 
       // Parse duration
       if (parts[3]) {
-        postData.duration = parseDurationToSeconds_(parts[3].trim());
+        postData.duration = parseDurationToSeconds_(parts[3].trim())
       }
 
       // Skip empty titles
       if (!postData.title) {
-        errors.push(`Rad ${index + 1}: Tom titel, hoppar över`);
-        return;
+        errors.push(`Row ${index + 1}: Empty title, skipping`)
+        return
       }
 
       // Create the post
-      const postId = createPost(postData);
+      const postId = createPost(postData)
 
       // Handle people if specified
       if (parts[2] && parts[2].trim()) {
-        const peopleNames = parts[2].split(',').map(n => n.trim()).filter(n => n);
-        const peopleIds = [];
+        const peopleNames = parts[2]
+          .split(',')
+          .map((n) => n.trim())
+          .filter((n) => n)
+        const peopleIds = []
 
-        peopleNames.forEach(name => {
-          const existing = findPersonByName_(name);
+        peopleNames.forEach((name) => {
+          const existing = findPersonByName_(name)
           if (existing) {
-            peopleIds.push(existing[PERSON_SCHEMA.ID]);
+            peopleIds.push(existing[PERSON_SCHEMA.ID])
           } else {
-            const newId = createPerson({ name: name });
-            peopleIds.push(newId);
+            const newId = createPerson({ name: name })
+            peopleIds.push(newId)
           }
-        });
+        })
 
         if (peopleIds.length > 0) {
-          updatePost(postId, { people_ids: peopleIds.join(',') }, 'import');
+          updatePost(postId, { people_ids: peopleIds.join(',') }, 'import')
         }
       }
 
-      imported++;
+      imported++
     } catch (error) {
-      errors.push(`Rad ${index + 1}: ${error.message}`);
+      errors.push(`Row ${index + 1}: ${error.message}`)
     }
-  });
+  })
 
   // Refresh the view
-  refreshProgramView(program_nr);
+  refreshProgramView(program_nr)
 
-  let message = `Importerade ${imported} av ${lines.length} poster till Program ${program_nr}.`;
+  let message = `Imported ${imported} of ${lines.length} posts to Programme ${program_nr}.`
   if (errors.length > 0) {
-    message += `\n\nVarningar:\n${errors.slice(0, 5).join('\n')}`;
+    message += `\n\nWarnings:\n${errors.slice(0, 5).join('\n')}`
     if (errors.length > 5) {
-      message += `\n... och ${errors.length - 5} till`;
+      message += `\n... and ${errors.length - 5} more`
     }
   }
 
-  return { success: imported > 0, message: message };
+  return { success: imported > 0, message: message }
 }
 
 // ============================================================================
@@ -568,45 +587,48 @@ function importPostsFromDialog(data) {
  * Delete currently selected post
  */
 function deleteCurrentPost() {
-  const ui = SpreadsheetApp.getUi();
-  const postId = getCurrentPostId_();
+  const ui = SpreadsheetApp.getUi()
+  const postId = getCurrentPostId_()
 
   if (!postId) {
-    ui.alert('Ingen post vald', 'Markera en rad med en post först (klicka på en cell i post-raden)', ui.ButtonSet.OK);
-    return;
+    ui.alert(
+      'No post selected',
+      'Select a row with a post first (click on a cell in the post row)',
+      ui.ButtonSet.OK,
+    )
+    return
   }
 
   // Get post details for confirmation
-  const sheet = SpreadsheetApp.getActiveSheet();
-  const row = sheet.getActiveCell().getRow();
-  const postTitle = sheet.getRange(row, 3).getValue(); // Column C = Innehåll
+  const sheet = SpreadsheetApp.getActiveSheet()
+  const row = sheet.getActiveCell().getRow()
+  const postTitle = sheet.getRange(row, 3).getValue() // Column C = Content
 
   const confirm = ui.alert(
-    'Radera post?',
-    `Vill du verkligen radera post ${postId}?\n\n"${postTitle}"\n\nDetta kan inte ångras!`,
-    ui.ButtonSet.YES_NO
-  );
+    'Delete post?',
+    `Are you sure you want to delete post ${postId}?\n\n"${postTitle}"\n\nThis cannot be undone!`,
+    ui.ButtonSet.YES_NO,
+  )
 
   if (confirm !== ui.Button.YES) {
-    return;
+    return
   }
 
   try {
-    deletePost(postId);
+    deletePost(postId)
 
     // Determine which program we're in and refresh
-    const sheetName = sheet.getName();
-    const match = sheetName.match(/Program (\d)/);
+    const sheetName = sheet.getName()
+    const match = sheetName.match(/Program (\d)/)
     if (match) {
-      const programNr = parseInt(match[1], 10);
-      refreshProgramView(programNr);
+      const programNr = parseInt(match[1], 10)
+      refreshProgramView(programNr)
     }
 
-    ui.alert('Post raderad', `Post ${postId} har raderats.`, ui.ButtonSet.OK);
-
+    ui.alert('Post deleted', `Post ${postId} has been deleted.`, ui.ButtonSet.OK)
   } catch (error) {
-    ui.alert('Fel', `Kunde inte radera post: ${error.message}`, ui.ButtonSet.OK);
-    Logger.log(`Delete post error: ${error.stack}`);
+    ui.alert('Error', `Could not delete post: ${error.message}`, ui.ButtonSet.OK)
+    Logger.log(`Delete post error: ${error.stack}`)
   }
 }
 
@@ -618,53 +640,61 @@ function deleteCurrentPost() {
  * Mark current post as recorded
  */
 function markCurrentPostRecorded() {
-  const postId = getCurrentPostId_();
+  const postId = getCurrentPostId_()
   if (!postId) {
-    SpreadsheetApp.getUi().alert('Markera en rad med en post först');
-    return;
+    SpreadsheetApp.getUi().alert('Select a row with a post first')
+    return
   }
-  
-  updatePost(postId, { status: POST_STATUS.RECORDED.key }, 'ui');
-  SpreadsheetApp.getActiveSpreadsheet().toast(`Post ${postId} markerad som inspelad`, 'Status uppdaterad', 2);
+
+  updatePost(postId, { status: POST_STATUS.RECORDED.key }, 'ui')
+  SpreadsheetApp.getActiveSpreadsheet().toast(
+    `Post ${postId} marked as recorded`,
+    'Status updated',
+    2,
+  )
 
   // Refresh current view
-  SpreadsheetApp.flush();
+  SpreadsheetApp.flush()
 }
 
 /**
  * Mark current post as recording
  */
 function markCurrentPostRecording() {
-  const postId = getCurrentPostId_();
+  const postId = getCurrentPostId_()
   if (!postId) {
-    SpreadsheetApp.getUi().alert('Markera en rad med en post först');
-    return;
+    SpreadsheetApp.getUi().alert('Select a row with a post first')
+    return
   }
 
-  updatePost(postId, { status: POST_STATUS.RECORDING.key }, 'ui');
-  SpreadsheetApp.getActiveSpreadsheet().toast(`Post ${postId} markerad som spelar in`, 'Status uppdaterad', 2);
+  updatePost(postId, { status: POST_STATUS.RECORDING.key }, 'ui')
+  SpreadsheetApp.getActiveSpreadsheet().toast(
+    `Post ${postId} marked as recording`,
+    'Status updated',
+    2,
+  )
 
-  SpreadsheetApp.flush();
+  SpreadsheetApp.flush()
 }
 
 /**
  * Get post ID from currently selected row
  */
 function getCurrentPostId_() {
-  const sheet = SpreadsheetApp.getActiveSheet();
-  const row = sheet.getActiveCell().getRow();
-  
-  if (row < VIEW_CONFIG.DATA_START_ROW) return null;
-  
+  const sheet = SpreadsheetApp.getActiveSheet()
+  const row = sheet.getActiveCell().getRow()
+
+  if (row < VIEW_CONFIG.DATA_START_ROW) return null
+
   // Post ID is in column A
-  const postId = sheet.getRange(row, 1).getValue();
-  
+  const postId = sheet.getRange(row, 1).getValue()
+
   // Validate format (PX:YY)
   if (typeof postId === 'string' && postId.match(/^P\d:\d+$/)) {
-    return postId;
+    return postId
   }
-  
-  return null;
+
+  return null
 }
 
 // ============================================================================
@@ -675,14 +705,14 @@ function getCurrentPostId_() {
  * Move current post up in sort order
  */
 function movePostUp() {
-  movePost_(-1);
+  movePost_(-1)
 }
 
 /**
  * Move current post down in sort order
  */
 function movePostDown() {
-  movePost_(1);
+  movePost_(1)
 }
 
 /**
@@ -690,82 +720,85 @@ function movePostDown() {
  * @param {Number} direction - -1 for up, 1 for down
  */
 function movePost_(direction) {
-  const ui = SpreadsheetApp.getUi();
-  const sheet = SpreadsheetApp.getActiveSheet();
-  const sheetName = sheet.getName();
+  const ui = SpreadsheetApp.getUi()
+  const sheet = SpreadsheetApp.getActiveSheet()
+  const sheetName = sheet.getName()
 
   // Verify we're in a programme view
-  const match = sheetName.match(/^Program (\d)$/);
+  const match = sheetName.match(/^Programme (\d)$/)
   if (!match) {
-    ui.alert('Fel', 'Denna funktion fungerar bara i Program-vyer (Program 1-4)', ui.ButtonSet.OK);
-    return;
+    ui.alert(
+      'Error',
+      'This function only works in Programme views (Programme 1-4)',
+      ui.ButtonSet.OK,
+    )
+    return
   }
 
-  const programNr = parseInt(match[1], 10);
-  const postId = getCurrentPostId_();
+  const programNr = parseInt(match[1], 10)
+  const postId = getCurrentPostId_()
 
   if (!postId) {
-    ui.alert('Ingen post vald', 'Markera en rad med en post först', ui.ButtonSet.OK);
-    return;
+    ui.alert('No post selected', 'Select a row with a post first', ui.ButtonSet.OK)
+    return
   }
 
   try {
     // Get all posts for this program, sorted by sort_order
-    const posts = getAllPostsForProgram_(programNr);
-    posts.sort((a, b) => a[POST_SCHEMA.SORT_ORDER] - b[POST_SCHEMA.SORT_ORDER]);
+    const posts = getAllPostsForProgram_(programNr)
+    posts.sort((a, b) => a[POST_SCHEMA.SORT_ORDER] - b[POST_SCHEMA.SORT_ORDER])
 
     // Find current post index
-    let currentIndex = -1;
+    let currentIndex = -1
     for (let i = 0; i < posts.length; i++) {
       if (posts[i][POST_SCHEMA.ID] === postId) {
-        currentIndex = i;
-        break;
+        currentIndex = i
+        break
       }
     }
 
     if (currentIndex === -1) {
-      throw new Error('Posten hittades inte i databasen');
+      throw new Error('Post not found in database')
     }
 
     // Calculate target index
-    const targetIndex = currentIndex + direction;
+    const targetIndex = currentIndex + direction
 
     // Check bounds
     if (targetIndex < 0) {
-      ui.alert('Kan inte flytta', 'Posten är redan överst i listan', ui.ButtonSet.OK);
-      return;
+      ui.alert('Cannot move', 'The post is already at the top of the list', ui.ButtonSet.OK)
+      return
     }
     if (targetIndex >= posts.length) {
-      ui.alert('Kan inte flytta', 'Posten är redan längst ner i listan', ui.ButtonSet.OK);
-      return;
+      ui.alert('Cannot move', 'The post is already at the bottom of the list', ui.ButtonSet.OK)
+      return
     }
 
     // Get the two posts to swap
-    const currentPost = posts[currentIndex];
-    const targetPost = posts[targetIndex];
+    const currentPost = posts[currentIndex]
+    const targetPost = posts[targetIndex]
 
     // Swap sort_order values
-    const currentSortOrder = currentPost[POST_SCHEMA.SORT_ORDER];
-    const targetSortOrder = targetPost[POST_SCHEMA.SORT_ORDER];
+    const currentSortOrder = currentPost[POST_SCHEMA.SORT_ORDER]
+    const targetSortOrder = targetPost[POST_SCHEMA.SORT_ORDER]
 
     // Update both posts in database
-    updatePost(currentPost[POST_SCHEMA.ID], { sort_order: targetSortOrder }, 'ui');
-    updatePost(targetPost[POST_SCHEMA.ID], { sort_order: currentSortOrder }, 'ui');
+    updatePost(currentPost[POST_SCHEMA.ID], { sort_order: targetSortOrder }, 'ui')
+    updatePost(targetPost[POST_SCHEMA.ID], { sort_order: currentSortOrder }, 'ui')
 
     // Refresh the view
-    refreshProgramView(programNr);
+    refreshProgramView(programNr)
 
     // Show confirmation
-    const directionText = direction === -1 ? 'upp' : 'ner';
+    const directionText = direction === -1 ? 'up' : 'down'
     SpreadsheetApp.getActiveSpreadsheet().toast(
-      `Post ${postId} flyttad ${directionText}`,
-      'Post flyttad',
-      2
-    );
-
+      `Post ${postId} moved ${directionText}`,
+      'Post moved',
+      2,
+    )
   } catch (error) {
-    ui.alert('Fel', `Kunde inte flytta post: ${error.message}`, ui.ButtonSet.OK);
-    Logger.log(`Move post error: ${error.stack}`);
+    ui.alert('Error', `Could not move post: ${error.message}`, ui.ButtonSet.OK)
+    Logger.log(`Move post error: ${error.stack}`)
   }
 }
 
@@ -777,9 +810,10 @@ function movePost_(direction) {
  * Show dialogue for adding new person
  */
 function showAddPersonDialog() {
-  const ui = SpreadsheetApp.getUi();
+  const ui = SpreadsheetApp.getUi()
 
-  const html = HtmlService.createHtmlOutput(`
+  const html = HtmlService.createHtmlOutput(
+    `
     <style>
       body {
         font-family: 'Roboto', Arial, sans-serif;
@@ -834,28 +868,28 @@ function showAddPersonDialog() {
       }
     </style>
 
-    <h2>👥 Lägg till person</h2>
+    <h2>👥 Add person</h2>
 
-    <label class="required">Namn</label>
-    <input type="text" id="name" placeholder="T.ex. 'Maria Löfgren'" />
+    <label class="required">Name</label>
+    <input type="text" id="name" placeholder="E.g. 'Mary Smith'" />
 
-    <label>Roll(er)</label>
-    <input type="text" id="roles" placeholder="T.ex. 'predikant, liturg'" />
-    <div class="help-text">Kommaseparerat om flera roller</div>
+    <label>Role(s)</label>
+    <input type="text" id="roles" placeholder="E.g. 'preacher, liturgist'" />
+    <div class="help-text">Comma-separated if multiple roles</div>
 
-    <label>Kontakt</label>
-    <input type="text" id="contact" placeholder="E-post eller telefon" />
+    <label>Contact</label>
+    <input type="text" id="contact" placeholder="Email or phone" />
 
-    <label>Typ</label>
+    <label>Type</label>
     <select id="type">
-      <option value="medverkande">Medverkande (i gudstjänsten)</option>
-      <option value="team">Team (produktionspersonal)</option>
-      <option value="kompositör">Kompositör</option>
-      <option value="textförfattare">Textförfattare</option>
+      <option value="participant">Participant (in the service)</option>
+      <option value="team">Team (production staff)</option>
+      <option value="composer">Composer</option>
+      <option value="text_author">Text author</option>
     </select>
 
-    <button onclick="savePerson()">Skapa person</button>
-    <button class="cancel-btn" onclick="google.script.host.close()">Avbryt</button>
+    <button onclick="savePerson()">Create person</button>
+    <button class="cancel-btn" onclick="google.script.host.close()">Cancel</button>
 
     <script>
       function savePerson() {
@@ -867,26 +901,27 @@ function showAddPersonDialog() {
         };
 
         if (!data.name) {
-          alert('Namn måste anges');
+          alert('Name must be specified');
           return;
         }
 
         google.script.run
           .withSuccessHandler((personId) => {
-            alert('Person skapad: ' + personId);
+            alert('Person created: ' + personId);
             google.script.host.close();
           })
           .withFailureHandler((error) => {
-            alert('Fel: ' + error.message);
+            alert('Error: ' + error.message);
           })
           .createPersonFromDialog(data);
       }
     </script>
-  `)
+  `,
+  )
     .setWidth(450)
-    .setHeight(450);
+    .setHeight(450)
 
-  ui.showModalDialog(html, 'Ny person');
+  ui.showModalDialog(html, 'New person')
 }
 
 /**
@@ -894,9 +929,11 @@ function showAddPersonDialog() {
  */
 function createPersonFromDialog(data) {
   // Check if person already exists
-  const existing = findPersonByName_(data.name);
+  const existing = findPersonByName_(data.name)
   if (existing) {
-    throw new Error(`En person med namnet "${data.name}" finns redan (ID: ${existing[PERSON_SCHEMA.ID]})`);
+    throw new Error(
+      `A person with the name "${data.name}" already exists (ID: ${existing[PERSON_SCHEMA.ID]})`,
+    )
   }
 
   // Create person in database
@@ -904,27 +941,35 @@ function createPersonFromDialog(data) {
     name: data.name,
     roles: data.roles,
     contact: data.contact,
-    type: data.type
-  });
+    type: data.type,
+  })
 
-  Logger.log(`Created person from dialog: ${personId}`);
-  return personId;
+  Logger.log(`Created person from dialog: ${personId}`)
+  return personId
 }
 
 /**
  * Show list of all people
  */
 function showPeopleList() {
-  const ui = SpreadsheetApp.getUi();
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ui = SpreadsheetApp.getUi()
+  const ss = SpreadsheetApp.getActiveSpreadsheet()
 
   // Navigate to credits view which shows all people
-  const sheet = ss.getSheetByName(VIEW.CREDITS);
+  const sheet = ss.getSheetByName(VIEW.CREDITS)
   if (sheet) {
-    ss.setActiveSheet(sheet);
-    ui.alert('Kreditlista', 'Här visas alla registrerade personer.\n\nFör att lägga till ny person:\nPersoner > Lägg till person', ui.ButtonSet.OK);
+    ss.setActiveSheet(sheet)
+    ui.alert(
+      'Credits',
+      'All registered people are shown here.\n\nTo add a new person:\nPeople > Add person',
+      ui.ButtonSet.OK,
+    )
   } else {
-    ui.alert('Fel', 'Kreditlista-bladet finns inte. Kör System > Generate All Views först.', ui.ButtonSet.OK);
+    ui.alert(
+      'Error',
+      'Credits sheet does not exist. Run System > Generate All Views first.',
+      ui.ButtonSet.OK,
+    )
   }
 }
 
@@ -936,73 +981,76 @@ function showPeopleList() {
  * Show current recording status dialog
  */
 function showRecordingStatus() {
-  const ui = SpreadsheetApp.getUi();
-  const info = getCurrentPostInfo();
+  const ui = SpreadsheetApp.getUi()
+  const info = getCurrentPostInfo()
 
   if (!info.hasCurrentPost) {
     // Get stats from database
-    const postsSheet = getDbSheet_(DB.POSTS);
-    const data = postsSheet.getDataRange().getValues();
+    const postsSheet = getDbSheet_(DB.POSTS)
+    const data = postsSheet.getDataRange().getValues()
 
-    let planned = 0, recording = 0, recorded = 0, approved = 0;
+    let planned = 0,
+      recording = 0,
+      recorded = 0,
+      approved = 0
 
     for (let i = 1; i < data.length; i++) {
-      const status = data[i][POST_SCHEMA.STATUS];
-      if (status === POST_STATUS.PLANNED.key) planned++;
-      else if (status === POST_STATUS.RECORDING.key) recording++;
-      else if (status === POST_STATUS.RECORDED.key) recorded++;
-      else if (status === POST_STATUS.APPROVED.key) approved++;
+      const status = data[i][POST_SCHEMA.STATUS]
+      if (status === POST_STATUS.PLANNED.key) planned++
+      else if (status === POST_STATUS.RECORDING.key) recording++
+      else if (status === POST_STATUS.RECORDED.key) recorded++
+      else if (status === POST_STATUS.APPROVED.key) approved++
     }
 
-    const total = planned + recording + recorded + approved;
-    const progress = total > 0 ? Math.round(((recorded + approved) / total) * 100) : 0;
+    const total = planned + recording + recorded + approved
+    const progress = total > 0 ? Math.round(((recorded + approved) / total) * 100) : 0
 
     ui.alert(
-      '📊 Inspelningsstatus',
-      `Ingen aktiv inspelning just nu.\n\n` +
-      `STATISTIK:\n` +
-      `━━━━━━━━━━━━━━━━━━━\n` +
-      `📝 Planerade: ${planned}\n` +
-      `⏺️ Spelar in: ${recording}\n` +
-      `✅ Inspelade: ${recorded}\n` +
-      `👍 Godkända: ${approved}\n` +
-      `━━━━━━━━━━━━━━━━━━━\n` +
-      `Totalt: ${total} poster\n` +
-      `Framsteg: ${progress}%`,
-      ui.ButtonSet.OK
-    );
+      '📊 Recording Status',
+      `No active recording at this time.\n\n` +
+        `STATISTICS:\n` +
+        `━━━━━━━━━━━━━━━━━━━\n` +
+        `📝 Planned: ${planned}\n` +
+        `⏺️ Recording: ${recording}\n` +
+        `✅ Recorded: ${recorded}\n` +
+        `👍 Approved: ${approved}\n` +
+        `━━━━━━━━━━━━━━━━━━━\n` +
+        `Total: ${total} posts\n` +
+        `Progress: ${progress}%`,
+      ui.ButtonSet.OK,
+    )
   } else {
     // Get post details
-    const postsSheet = getDbSheet_(DB.POSTS);
-    const data = postsSheet.getDataRange().getValues();
-    let postData = null;
+    const postsSheet = getDbSheet_(DB.POSTS)
+    const data = postsSheet.getDataRange().getValues()
+    let postData = null
 
     for (let i = 1; i < data.length; i++) {
       if (data[i][POST_SCHEMA.ID] === info.post_id) {
-        postData = data[i];
-        break;
+        postData = data[i]
+        break
       }
     }
 
     if (postData) {
-      const postType = getPostTypeByKey_(postData[POST_SCHEMA.TYPE]);
-      const typeName = postType ? postType.display_name : postData[POST_SCHEMA.TYPE];
+      const postType = getPostTypeByKey_(postData[POST_SCHEMA.TYPE])
+      const typeName = postType ? postType.display_name : postData[POST_SCHEMA.TYPE]
 
       ui.alert(
-        '🎬 AKTIV INSPELNING',
+        '🎬 ACTIVE RECORDING',
         `POST: ${info.post_id}\n` +
-        `━━━━━━━━━━━━━━━━━━━\n` +
-        `Typ: ${typeName}\n` +
-        `Innehåll: ${postData[POST_SCHEMA.TITLE] || '(ingen titel)'}\n` +
-        `Duration: ${formatDuration_(postData[POST_SCHEMA.DURATION])}\n` +
-        `Plats: ${postData[POST_SCHEMA.LOCATION] || '(ej angiven)'}\n` +
-        `━━━━━━━━━━━━━━━━━━━\n\n` +
-        `Klicka "Produktion > Gå till aktiv inspelning"\n` +
-        `för att navigera till posten.`,
-        ui.ButtonSet.OK
-      );
+          `━━━━━━━━━━━━━━━━━━━\n` +
+          `Type: ${typeName}\n` +
+          `Content: ${postData[POST_SCHEMA.TITLE] || '(no title)'}\n` +
+          `Duration: ${formatDuration_(postData[POST_SCHEMA.DURATION])}\n` +
+          `Location: ${postData[POST_SCHEMA.LOCATION] || '(not specified)'}\n` +
+          `━━━━━━━━━━━━━━━━━━━\n\n` +
+          `Click "Production > Go to active recording"\n` +
+          `to navigate to the post.`,
+        ui.ButtonSet.OK,
+      )
     } else {
-      ui.alert('Aktiv inspelning', `Post ${info.post_id} är markerad som aktiv.`, ui.ButtonSet.OK);
+      ui.alert('Active recording', `Post ${info.post_id} is marked as active.`, ui.ButtonSet.OK)
     }
   }
 }
@@ -1011,37 +1059,45 @@ function showRecordingStatus() {
  * Mark current post as approved
  */
 function markCurrentPostApproved() {
-  const ui = SpreadsheetApp.getUi();
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const activeSheet = ss.getActiveSheet();
-  const sheetName = activeSheet.getName();
+  const ui = SpreadsheetApp.getUi()
+  const ss = SpreadsheetApp.getActiveSpreadsheet()
+  const activeSheet = ss.getActiveSheet()
+  const sheetName = activeSheet.getName()
 
   // Check if we're in a programme view
-  const programMatch = sheetName.match(/^Program (\d+)$/);
+  const programMatch = sheetName.match(/^Programme (\d+)$/)
   if (!programMatch) {
-    ui.alert('Fel', 'Denna funktion fungerar bara från Program-vyer (Program 1, 2, 3 eller 4).', ui.ButtonSet.OK);
-    return;
+    ui.alert(
+      'Error',
+      'This function only works from Programme views (Programme 1, 2, 3 or 4).',
+      ui.ButtonSet.OK,
+    )
+    return
   }
 
   // Get current row
-  const activeRow = ss.getActiveRange().getRow();
+  const activeRow = ss.getActiveRange().getRow()
   if (activeRow < VIEW_CONFIG.DATA_START_ROW) {
-    ui.alert('Fel', 'Välj en post-rad först (rad 7 eller senare).', ui.ButtonSet.OK);
-    return;
+    ui.alert('Error', 'Select a post row first (row 7 or later).', ui.ButtonSet.OK)
+    return
   }
 
   // Get post_id from column A
-  const postId = activeSheet.getRange(activeRow, 1).getValue();
+  const postId = activeSheet.getRange(activeRow, 1).getValue()
   if (!postId || !postId.match || !postId.match(/^P\d+:\d+$/)) {
-    ui.alert('Fel', 'Kunde inte hitta post_id. Välj en rad med en post.', ui.ButtonSet.OK);
-    return;
+    ui.alert('Error', 'Could not find post_id. Select a row with a post.', ui.ButtonSet.OK)
+    return
   }
 
   try {
-    updatePost(postId, { status: POST_STATUS.APPROVED.key }, 'ui');
-    SpreadsheetApp.getActiveSpreadsheet().toast(`Post ${postId} markerad som godkänd`, '👍 Godkänd', 3);
+    updatePost(postId, { status: POST_STATUS.APPROVED.key }, 'ui')
+    SpreadsheetApp.getActiveSpreadsheet().toast(
+      `Post ${postId} marked as approved`,
+      '👍 Approved',
+      3,
+    )
   } catch (error) {
-    ui.alert('Fel', `Kunde inte uppdatera post: ${error.message}`, ui.ButtonSet.OK);
+    ui.alert('Error', `Could not update post: ${error.message}`, ui.ButtonSet.OK)
   }
 }
 
@@ -1053,10 +1109,10 @@ function markCurrentPostApproved() {
  * Navigate to schedule view
  */
 function goToScheduleView() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(VIEW.SCHEDULE);
+  const ss = SpreadsheetApp.getActiveSpreadsheet()
+  const sheet = ss.getSheetByName(VIEW.SCHEDULE)
   if (sheet) {
-    ss.setActiveSheet(sheet);
+    ss.setActiveSheet(sheet)
   }
 }
 
@@ -1064,10 +1120,10 @@ function goToScheduleView() {
  * Navigate to overview
  */
 function goToOverviewView() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(VIEW.OVERVIEW);
+  const ss = SpreadsheetApp.getActiveSpreadsheet()
+  const sheet = ss.getSheetByName(VIEW.OVERVIEW)
   if (sheet) {
-    ss.setActiveSheet(sheet);
+    ss.setActiveSheet(sheet)
   }
 }
 
@@ -1075,10 +1131,10 @@ function goToOverviewView() {
  * Navigate to credits
  */
 function goToCreditsView() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(VIEW.CREDITS);
+  const ss = SpreadsheetApp.getActiveSpreadsheet()
+  const sheet = ss.getSheetByName(VIEW.CREDITS)
   if (sheet) {
-    ss.setActiveSheet(sheet);
+    ss.setActiveSheet(sheet)
   }
 }
 
@@ -1086,12 +1142,12 @@ function goToCreditsView() {
  * Show post types sheet
  */
 function goToPostTypesSheet() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(DB.POST_TYPES);
+  const ss = SpreadsheetApp.getActiveSpreadsheet()
+  const sheet = ss.getSheetByName(DB.POST_TYPES)
   if (sheet) {
-    sheet.showSheet();
-    ss.setActiveSheet(sheet);
-    SpreadsheetApp.getUi().alert('Du kan nu redigera posttyper. Dölj bladet igen när du är klar.');
+    sheet.showSheet()
+    ss.setActiveSheet(sheet)
+    SpreadsheetApp.getUi().alert('You can now edit post types. Hide the sheet again when finished.')
   }
 }
 
@@ -1099,12 +1155,14 @@ function goToPostTypesSheet() {
  * Show programmes metadata sheet
  */
 function goToProgramsSheet() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(DB.PROGRAMS);
+  const ss = SpreadsheetApp.getActiveSpreadsheet()
+  const sheet = ss.getSheetByName(DB.PROGRAMS)
   if (sheet) {
-    sheet.showSheet();
-    ss.setActiveSheet(sheet);
-    SpreadsheetApp.getUi().alert('Du kan nu redigera program­metadata. Dölj bladet igen när du är klar.');
+    sheet.showSheet()
+    ss.setActiveSheet(sheet)
+    SpreadsheetApp.getUi().alert(
+      'You can now edit programme metadata. Hide the sheet again when finished.',
+    )
   }
 }
 
@@ -1112,15 +1170,31 @@ function goToProgramsSheet() {
 // ARCHIVING WRAPPER FUNCTIONS
 // ============================================================================
 
-function archiveProgram1() { archiveProgram(1); }
-function archiveProgram2() { archiveProgram(2); }
-function archiveProgram3() { archiveProgram(3); }
-function archiveProgram4() { archiveProgram(4); }
+function archiveProgram1() {
+  archiveProgram(1)
+}
+function archiveProgram2() {
+  archiveProgram(2)
+}
+function archiveProgram3() {
+  archiveProgram(3)
+}
+function archiveProgram4() {
+  archiveProgram(4)
+}
 
-function archiveAndClearProgram1() { archiveAndClearProgram(1); }
-function archiveAndClearProgram2() { archiveAndClearProgram(2); }
-function archiveAndClearProgram3() { archiveAndClearProgram(3); }
-function archiveAndClearProgram4() { archiveAndClearProgram(4); }
+function archiveAndClearProgram1() {
+  archiveAndClearProgram(1)
+}
+function archiveAndClearProgram2() {
+  archiveAndClearProgram(2)
+}
+function archiveAndClearProgram3() {
+  archiveAndClearProgram(3)
+}
+function archiveAndClearProgram4() {
+  archiveAndClearProgram(4)
+}
 
 // ============================================================================
 // INFORMATION DIALOGUES
@@ -1130,40 +1204,40 @@ function archiveAndClearProgram4() { archiveAndClearProgram(4); }
  * Show about dialogue
  */
 function showAbout() {
-  const ui = SpreadsheetApp.getUi();
+  const ui = SpreadsheetApp.getUi()
   ui.alert(
-    'Om systemet',
+    'About',
     `${SYSTEM_NAME} v${SYSTEM_VERSION}\\n\\n` +
-    `Skapad av: ${CREATED_BY}\\n\\n` +
-    'Ett modernt produktionssystem för gudstjänst-TV baserat på ' +
-    'normaliserad databas och dynamiska vyer.\\n\\n' +
-    'Arkitektur:\\n' +
-    '• Database layer (_DB_*): Single source of truth\\n' +
-    '• View layer (Program 1-4, etc): Read-only presentation\\n' +
-    '• API layer: Prepared for Companion/BMD integration',
-    ui.ButtonSet.OK
-  );
+      `Created by: ${CREATED_BY}\\n\\n` +
+      'A modern production system for church service television based on ' +
+      'normalised database and dynamic views.\\n\\n' +
+      'Architecture:\\n' +
+      '• Database layer (_DB_*): Single source of truth\\n' +
+      '• View layer (Programme 1-4, etc): Read-only presentation\\n' +
+      '• API layer: Prepared for Companion/BMD integration',
+    ui.ButtonSet.OK,
+  )
 }
 
 /**
  * Show documentation
  */
 function showDocumentation() {
-  const ui = SpreadsheetApp.getUi();
+  const ui = SpreadsheetApp.getUi()
   ui.alert(
-    'Dokumentation',
-    'SNABBSTART:\\n\\n' +
-    '1. Kör "System > Bootstrap Database" (en gång)\\n' +
-    '2. Redigera program­metadata via "Inställningar > Redigera program­metadata"\\n' +
-    '3. Lägg till personer via "Personer > Lägg till person"\\n' +
-    '4. Skapa poster via "Poster > Lägg till ny post"\\n\\n' +
-    'ARBETSFLÖDE:\\n' +
-    '• Program 1-4: Redigera direkt i vyerna\\n' +
-    '• Inspelningsschema: Auto-genererad översikt\\n' +
-    '• Översikt: Dashboard med statistik\\n\\n' +
-    'Full dokumentation: github.com/davidthast/gudstjanst-system',
-    ui.ButtonSet.OK
-  );
+    'Documentation',
+    'QUICK START:\\n\\n' +
+      '1. Run "System > Bootstrap Database" (once)\\n' +
+      '2. Edit programme metadata via "Settings > Edit programme metadata"\\n' +
+      '3. Add people via "People > Add person"\\n' +
+      '4. Create posts via "Posts > Add new post"\\n\\n' +
+      'WORKFLOW:\\n' +
+      '• Programme 1-4: Edit directly in the views\\n' +
+      '• Recording Schedule: Auto-generated overview\\n' +
+      '• Overview: Dashboard with statistics\\n\\n' +
+      'Full documentation: github.com/davidthast/church-service-system',
+    ui.ButtonSet.OK,
+  )
 }
 
 // ============================================================================
@@ -1174,19 +1248,20 @@ function showDocumentation() {
  * Show system settings dialog
  */
 function showSettingsDialog() {
-  const ui = SpreadsheetApp.getUi();
+  const ui = SpreadsheetApp.getUi()
 
   // Get current settings
-  const settingsSheet = getDbSheet_(DB.SETTINGS);
-  const settingsData = settingsSheet.getDataRange().getValues();
+  const settingsSheet = getDbSheet_(DB.SETTINGS)
+  const settingsData = settingsSheet.getDataRange().getValues()
 
   // Build settings object
-  const settings = {};
+  const settings = {}
   for (let i = 1; i < settingsData.length; i++) {
-    settings[settingsData[i][0]] = settingsData[i][1];
+    settings[settingsData[i][0]] = settingsData[i][1]
   }
 
-  const html = HtmlService.createHtmlOutput(`
+  const html = HtmlService.createHtmlOutput(
+    `
     <style>
       body {
         font-family: 'Roboto', Arial, sans-serif;
@@ -1255,39 +1330,39 @@ function showSettingsDialog() {
       }
     </style>
 
-    <h2>⚙️ Systeminställningar</h2>
+    <h2>⚙️ System Settings</h2>
 
     <div class="info-box">
-      <strong>Version:</strong> ${settings['system_version'] || 'Okänd'}<br>
-      <strong>Senaste bootstrap:</strong> ${settings['last_bootstrap'] || 'Aldrig'}
+      <strong>Version:</strong> ${settings['system_version'] || 'Unknown'}<br>
+      <strong>Last bootstrap:</strong> ${settings['last_bootstrap'] || 'Never'}
     </div>
 
     <div class="setting-group">
-      <h3>📍 Platsinställningar</h3>
-      <label>Standardplats (kyrka)</label>
+      <h3>📍 Location Settings</h3>
+      <label>Default location (church)</label>
       <input type="text" id="location_name" value="${settings['location_name'] || ''}" />
-      <div class="help-text">Används som default vid nya program</div>
+      <div class="help-text">Used as default for new programmes</div>
     </div>
 
     <div class="setting-group">
-      <h3>⏰ Tidsinställningar</h3>
-      <label>Standard starttid (Dag 1)</label>
+      <h3>⏰ Time Settings</h3>
+      <label>Default start time (Day 1)</label>
       <input type="text" id="default_start_time" value="${settings['default_start_time'] || '09:00:00'}" placeholder="HH:MM:SS" />
-      <div class="help-text">Format: HH:MM:SS (t.ex. 09:00:00)</div>
+      <div class="help-text">Format: HH:MM:SS (e.g. 09:00:00)</div>
     </div>
 
     <div class="setting-group">
-      <h3>🔌 API-inställningar</h3>
-      <label>API aktiverat</label>
+      <h3>🔌 API Settings</h3>
+      <label>API enabled</label>
       <select id="api_enabled">
-        <option value="false" ${settings['api_enabled'] !== 'true' ? 'selected' : ''}>Nej (standard)</option>
-        <option value="true" ${settings['api_enabled'] === 'true' ? 'selected' : ''}>Ja</option>
+        <option value="false" ${settings['api_enabled'] !== 'true' ? 'selected' : ''}>No (default)</option>
+        <option value="true" ${settings['api_enabled'] === 'true' ? 'selected' : ''}>Yes</option>
       </select>
-      <div class="help-text">Aktivera för Companion/vMix-integration</div>
+      <div class="help-text">Enable for Companion/vMix integration</div>
     </div>
 
-    <button onclick="saveSettings()">Spara inställningar</button>
-    <button class="cancel-btn" onclick="google.script.host.close()">Avbryt</button>
+    <button onclick="saveSettings()">Save settings</button>
+    <button class="cancel-btn" onclick="google.script.host.close()">Cancel</button>
 
     <script>
       function saveSettings() {
@@ -1299,40 +1374,41 @@ function showSettingsDialog() {
 
         google.script.run
           .withSuccessHandler(() => {
-            alert('Inställningar sparade!');
+            alert('Settings saved!');
             google.script.host.close();
           })
           .withFailureHandler((error) => {
-            alert('Fel: ' + error.message);
+            alert('Error: ' + error.message);
           })
           .saveSettingsFromDialog(data);
       }
     </script>
-  `)
+  `,
+  )
     .setWidth(500)
-    .setHeight(550);
+    .setHeight(550)
 
-  ui.showModalDialog(html, 'Systeminställningar');
+  ui.showModalDialog(html, 'System Settings')
 }
 
 /**
  * Save settings from dialog
  */
 function saveSettingsFromDialog(data) {
-  const sheet = getDbSheet_(DB.SETTINGS);
-  const settingsData = sheet.getDataRange().getValues();
+  const sheet = getDbSheet_(DB.SETTINGS)
+  const settingsData = sheet.getDataRange().getValues()
 
   // Update each setting
-  Object.keys(data).forEach(key => {
+  Object.keys(data).forEach((key) => {
     for (let i = 1; i < settingsData.length; i++) {
       if (settingsData[i][0] === key) {
-        sheet.getRange(i + 1, 2).setValue(data[key]);
-        break;
+        sheet.getRange(i + 1, 2).setValue(data[key])
+        break
       }
     }
-  });
+  })
 
-  Logger.log('Settings saved from dialog');
+  Logger.log('Settings saved from dialog')
 }
 
 // ============================================================================
@@ -1343,15 +1419,16 @@ function saveSettingsFromDialog(data) {
  * Show dialog with deleted posts (trash)
  */
 function showTrashDialog() {
-  const ui = SpreadsheetApp.getUi();
-  const deletedPosts = getDeletedPosts_();
+  const ui = SpreadsheetApp.getUi()
+  const deletedPosts = getDeletedPosts_()
 
   if (deletedPosts.length === 0) {
-    ui.alert('Papperskorgen är tom', 'Det finns inga borttagna poster att visa.', ui.ButtonSet.OK);
-    return;
+    ui.alert('Recycle bin is empty', 'There are no deleted posts to display.', ui.ButtonSet.OK)
+    return
   }
 
-  const html = HtmlService.createHtmlOutput(`
+  const html = HtmlService.createHtmlOutput(
+    `
     <style>
       body {
         font-family: 'Roboto', Arial, sans-serif;
@@ -1420,64 +1497,69 @@ function showTrashDialog() {
       }
     </style>
 
-    <h2>🗑️ Papperskorg</h2>
+    <h2>🗑️ Recycle Bin</h2>
 
     <div class="info-box">
-      Klicka "Återställ" för att återskapa en borttagen post.
-      Posten återställs till sitt ursprungliga program.
+      Click "Restore" to restore a deleted post.
+      The post will be restored to its original programme.
     </div>
 
     <table>
       <tr>
         <th>Post ID</th>
         <th>Pgm</th>
-        <th>Typ</th>
-        <th>Innehåll</th>
-        <th>Raderad</th>
+        <th>Type</th>
+        <th>Content</th>
+        <th>Deleted</th>
         <th></th>
       </tr>
-      ${deletedPosts.map(p => `
+      ${deletedPosts
+        .map(
+          (p) => `
         <tr>
           <td>${p.post_id}</td>
           <td>${p.program_nr}</td>
           <td>${p.type}</td>
           <td>${(p.title || '').substring(0, 30)}${(p.title || '').length > 30 ? '...' : ''}</td>
           <td>${p.deleted_at}</td>
-          <td><button class="btn btn-restore" onclick="restorePost('${p.post_id}')">♻️ Återställ</button></td>
+          <td><button class="btn btn-restore" onclick="restorePost('${p.post_id}')">♻️ Restore</button></td>
         </tr>
-      `).join('')}
+      `,
+        )
+        .join('')}
     </table>
 
     <div id="result" class="result"></div>
 
-    <button class="close-btn" onclick="google.script.host.close()">Stäng</button>
+    <button class="close-btn" onclick="google.script.host.close()">Close</button>
 
     <script>
       function restorePost(postId) {
         const resultEl = document.getElementById('result');
         resultEl.className = 'result loading';
-        resultEl.innerHTML = 'Återställer post...';
+        resultEl.innerHTML = 'Restoring post...';
 
         google.script.run
           .withSuccessHandler(function(result) {
             resultEl.className = 'result success';
-            resultEl.innerHTML = 'Post återställd! Stänger dialog...';
+            resultEl.innerHTML = 'Post restored! Closing dialog...';
             setTimeout(() => {
               google.script.host.close();
             }, 1500);
           })
           .withFailureHandler(function(error) {
             resultEl.className = 'result error';
-            resultEl.innerHTML = 'Fel: ' + error.message;
+            resultEl.innerHTML = 'Error: ' + error.message;
           })
           .restoreDeletedPost(postId);
       }
     </script>
-  `)
+  `,
+  )
     .setWidth(600)
-    .setHeight(450);
+    .setHeight(450)
 
-  ui.showModalDialog(html, 'Papperskorg - Borttagna poster');
+  ui.showModalDialog(html, 'Recycle Bin - Deleted Posts')
 }
 
 // ============================================================================
@@ -1488,9 +1570,10 @@ function showTrashDialog() {
  * Show dialog for restoring from backup
  */
 function showRestoreDialog() {
-  const ui = SpreadsheetApp.getUi();
+  const ui = SpreadsheetApp.getUi()
 
-  const html = HtmlService.createHtmlOutput(`
+  const html = HtmlService.createHtmlOutput(
+    `
     <style>
       body {
         font-family: 'Roboto', Arial, sans-serif;
@@ -1590,41 +1673,41 @@ function showRestoreDialog() {
       .tab-content.active { display: block; }
     </style>
 
-    <h2>🔄 Återställ från backup</h2>
+    <h2>🔄 Restore from backup</h2>
 
     <div class="warning-box">
-      <h3>⚠️ Varning</h3>
-      Detta kommer att <strong>ERSÄTTA</strong> all befintlig data i databasen.
-      Denna åtgärd kan inte ångras!
+      <h3>⚠️ Warning</h3>
+      This will <strong>REPLACE</strong> all existing data in the database.
+      This action cannot be undone!
     </div>
 
     <div class="tabs">
-      <button class="tab active" onclick="showTab('drive')">📁 Från Google Drive</button>
-      <button class="tab" onclick="showTab('json')">📋 Från JSON</button>
+      <button class="tab active" onclick="showTab('drive')">📁 From Google Drive</button>
+      <button class="tab" onclick="showTab('json')">📋 From JSON</button>
     </div>
 
     <div id="drive-tab" class="tab-content active">
       <div class="info-box">
-        Välj en backup-fil från mappen "Gudstjänst_Backups" i Google Drive.
+        Select a backup file from the "ChurchService_Backups" folder in Google Drive.
       </div>
-      <label>Tillgängliga backups</label>
+      <label>Available backups</label>
       <select id="backup-file">
-        <option value="">Laddar...</option>
+        <option value="">Loading...</option>
       </select>
     </div>
 
     <div id="json-tab" class="tab-content">
       <div class="info-box">
-        Klistra in JSON-data från en tidigare export eller backup-fil.
+        Paste JSON data from a previous export or backup file.
       </div>
-      <label>JSON-data</label>
+      <label>JSON data</label>
       <textarea id="json-data" placeholder='{"version": "1.0.0", "posts": [...], ...}'></textarea>
     </div>
 
     <div id="result" class="result"></div>
 
-    <button onclick="doRestore()">⚠️ Återställ data</button>
-    <button class="cancel-btn" onclick="google.script.host.close()">Avbryt</button>
+    <button onclick="doRestore()">⚠️ Restore data</button>
+    <button class="cancel-btn" onclick="google.script.host.close()">Cancel</button>
 
     <script>
       let activeTab = 'drive';
@@ -1642,28 +1725,28 @@ function showRestoreDialog() {
         .withSuccessHandler(function(files) {
           const select = document.getElementById('backup-file');
           if (files.length === 0) {
-            select.innerHTML = '<option value="">Inga backups hittade</option>';
+            select.innerHTML = '<option value="">No backups found</option>';
           } else {
-            select.innerHTML = '<option value="">-- Välj backup --</option>' +
+            select.innerHTML = '<option value="">-- Select backup --</option>' +
               files.map(f => '<option value="' + f.id + '">' + f.name + ' (' + f.date + ')</option>').join('');
           }
         })
         .withFailureHandler(function(error) {
           document.getElementById('backup-file').innerHTML =
-            '<option value="">Fel: ' + error.message + '</option>';
+            '<option value="">Error: ' + error.message + '</option>';
         })
         .getAvailableBackups();
 
       function doRestore() {
         const resultEl = document.getElementById('result');
         resultEl.className = 'result loading';
-        resultEl.innerHTML = 'Återställer data...';
+        resultEl.innerHTML = 'Restoring data...';
 
         if (activeTab === 'drive') {
           const fileId = document.getElementById('backup-file').value;
           if (!fileId) {
             resultEl.className = 'result error';
-            resultEl.innerHTML = 'Välj en backup-fil först';
+            resultEl.innerHTML = 'Select a backup file first';
             return;
           }
           google.script.run
@@ -1674,7 +1757,7 @@ function showRestoreDialog() {
           const json = document.getElementById('json-data').value.trim();
           if (!json) {
             resultEl.className = 'result error';
-            resultEl.innerHTML = 'Klistra in JSON-data först';
+            resultEl.innerHTML = 'Paste JSON data first';
             return;
           }
           google.script.run
@@ -1692,21 +1775,22 @@ function showRestoreDialog() {
           setTimeout(() => google.script.host.close(), 3000);
         } else {
           resultEl.className = 'result error';
-          resultEl.innerHTML = 'Fel: ' + result.error;
+          resultEl.innerHTML = 'Error: ' + result.error;
         }
       }
 
       function handleError(error) {
         const resultEl = document.getElementById('result');
         resultEl.className = 'result error';
-        resultEl.innerHTML = 'Fel: ' + error.message;
+        resultEl.innerHTML = 'Error: ' + error.message;
       }
     </script>
-  `)
+  `,
+  )
     .setWidth(550)
-    .setHeight(600);
+    .setHeight(600)
 
-  ui.showModalDialog(html, 'Återställ från backup');
+  ui.showModalDialog(html, 'Restore from backup')
 }
 
 /**
@@ -1715,44 +1799,43 @@ function showRestoreDialog() {
 function getAvailableBackups() {
   try {
     // Get backup folder
-    const settingsSheet = getDbSheet_(DB.SETTINGS);
-    const settingsData = settingsSheet.getDataRange().getValues();
-    let folderId = null;
+    const settingsSheet = getDbSheet_(DB.SETTINGS)
+    const settingsData = settingsSheet.getDataRange().getValues()
+    let folderId = null
 
     for (let i = 1; i < settingsData.length; i++) {
       if (settingsData[i][0] === 'backup_folder_id') {
-        folderId = settingsData[i][1];
-        break;
+        folderId = settingsData[i][1]
+        break
       }
     }
 
     if (!folderId) {
-      return [];
+      return []
     }
 
-    const folder = DriveApp.getFolderById(folderId);
-    const files = folder.getFilesByType(MimeType.PLAIN_TEXT);
-    const backups = [];
+    const folder = DriveApp.getFolderById(folderId)
+    const files = folder.getFilesByType(MimeType.PLAIN_TEXT)
+    const backups = []
 
     while (files.hasNext()) {
-      const file = files.next();
+      const file = files.next()
       if (file.getName().startsWith('gudstjanst_backup_')) {
         backups.push({
           id: file.getId(),
           name: file.getName(),
-          date: file.getDateCreated().toLocaleString('sv-SE')
-        });
+          date: file.getDateCreated().toLocaleString('sv-SE'),
+        })
       }
     }
 
     // Sort by date (newest first)
-    backups.sort((a, b) => b.date.localeCompare(a.date));
+    backups.sort((a, b) => b.date.localeCompare(a.date))
 
-    return backups;
-
+    return backups
   } catch (error) {
-    Logger.log(`Error getting backups: ${error.message}`);
-    return [];
+    Logger.log(`Error getting backups: ${error.message}`)
+    return []
   }
 }
 
@@ -1761,13 +1844,12 @@ function getAvailableBackups() {
  */
 function restoreFromDriveBackup(fileId) {
   try {
-    const file = DriveApp.getFileById(fileId);
-    const json = file.getBlob().getDataAsString();
+    const file = DriveApp.getFileById(fileId)
+    const json = file.getBlob().getDataAsString()
 
-    return restoreFromJsonBackup(json);
-
+    return restoreFromJsonBackup(json)
   } catch (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: error.message }
   }
 }
 
@@ -1775,21 +1857,21 @@ function restoreFromDriveBackup(fileId) {
  * Restore database from JSON string
  */
 function restoreFromJsonBackup(jsonString) {
-  const ui = SpreadsheetApp.getUi();
+  const ui = SpreadsheetApp.getUi()
 
   try {
-    const data = JSON.parse(jsonString);
+    const data = JSON.parse(jsonString)
 
     // Validate required fields
     if (!data.posts || !data.people || !data.programs) {
-      return { success: false, error: 'Ogiltig backup-fil: saknar posts, people eller programs' };
+      return { success: false, error: 'Invalid backup file: missing posts, people or programs' }
     }
 
     // Create pre-restore backup
-    Logger.log('Creating pre-restore backup...');
-    const preBackupResult = dailyBackup();
+    Logger.log('Creating pre-restore backup...')
+    const preBackupResult = dailyBackup()
     if (!preBackupResult.success) {
-      Logger.log('Warning: Could not create pre-restore backup');
+      Logger.log('Warning: Could not create pre-restore backup')
     }
 
     // Restore each table
@@ -1799,96 +1881,101 @@ function restoreFromJsonBackup(jsonString) {
       programs: 0,
       post_types: 0,
       log: 0,
-      settings: 0
-    };
+      settings: 0,
+    }
 
     // Restore posts
     if (data.posts && data.posts.length > 1) {
-      const sheet = getDbSheet_(DB.POSTS);
-      sheet.clear();
-      sheet.getRange(1, 1, data.posts.length, data.posts[0].length).setValues(data.posts);
-      restored.posts = data.posts.length - 1; // Minus header
+      const sheet = getDbSheet_(DB.POSTS)
+      sheet.clear()
+      sheet.getRange(1, 1, data.posts.length, data.posts[0].length).setValues(data.posts)
+      restored.posts = data.posts.length - 1 // Minus header
     }
 
     // Restore people
     if (data.people && data.people.length > 1) {
-      const sheet = getDbSheet_(DB.PEOPLE);
-      sheet.clear();
-      sheet.getRange(1, 1, data.people.length, data.people[0].length).setValues(data.people);
-      restored.people = data.people.length - 1;
+      const sheet = getDbSheet_(DB.PEOPLE)
+      sheet.clear()
+      sheet.getRange(1, 1, data.people.length, data.people[0].length).setValues(data.people)
+      restored.people = data.people.length - 1
     }
 
     // Restore programs
     if (data.programs && data.programs.length > 1) {
-      const sheet = getDbSheet_(DB.PROGRAMS);
-      sheet.clear();
-      sheet.getRange(1, 1, data.programs.length, data.programs[0].length).setValues(data.programs);
-      restored.programs = data.programs.length - 1;
+      const sheet = getDbSheet_(DB.PROGRAMS)
+      sheet.clear()
+      sheet.getRange(1, 1, data.programs.length, data.programs[0].length).setValues(data.programs)
+      restored.programs = data.programs.length - 1
     }
 
     // Restore post types
     if (data.post_types && data.post_types.length > 1) {
-      const sheet = getDbSheet_(DB.POST_TYPES);
-      sheet.clear();
-      sheet.getRange(1, 1, data.post_types.length, data.post_types[0].length).setValues(data.post_types);
-      restored.post_types = data.post_types.length - 1;
+      const sheet = getDbSheet_(DB.POST_TYPES)
+      sheet.clear()
+      sheet
+        .getRange(1, 1, data.post_types.length, data.post_types[0].length)
+        .setValues(data.post_types)
+      restored.post_types = data.post_types.length - 1
     }
 
     // Restore log
     if (data.log && data.log.length > 1) {
-      const sheet = getDbSheet_(DB.LOG);
-      sheet.clear();
-      sheet.getRange(1, 1, data.log.length, data.log[0].length).setValues(data.log);
-      restored.log = data.log.length - 1;
+      const sheet = getDbSheet_(DB.LOG)
+      sheet.clear()
+      sheet.getRange(1, 1, data.log.length, data.log[0].length).setValues(data.log)
+      restored.log = data.log.length - 1
     }
 
     // Restore settings (but preserve some system settings)
     if (data.settings && data.settings.length > 1) {
-      const sheet = getDbSheet_(DB.SETTINGS);
-      const currentSettings = sheet.getDataRange().getValues();
+      const sheet = getDbSheet_(DB.SETTINGS)
+      const currentSettings = sheet.getDataRange().getValues()
 
       // Preserve backup_folder_id
-      let backupFolderId = null;
+      let backupFolderId = null
       for (let i = 1; i < currentSettings.length; i++) {
         if (currentSettings[i][0] === 'backup_folder_id') {
-          backupFolderId = currentSettings[i][1];
-          break;
+          backupFolderId = currentSettings[i][1]
+          break
         }
       }
 
-      sheet.clear();
-      sheet.getRange(1, 1, data.settings.length, data.settings[0].length).setValues(data.settings);
+      sheet.clear()
+      sheet.getRange(1, 1, data.settings.length, data.settings[0].length).setValues(data.settings)
 
       // Re-add backup folder ID
       if (backupFolderId) {
-        sheet.appendRow(['backup_folder_id', backupFolderId, 'Google Drive folder for automatic backups']);
+        sheet.appendRow([
+          'backup_folder_id',
+          backupFolderId,
+          'Google Drive folder for automatic backups',
+        ])
       }
 
-      restored.settings = data.settings.length - 1;
+      restored.settings = data.settings.length - 1
     }
 
     // Add restore timestamp
-    const settingsSheet = getDbSheet_(DB.SETTINGS);
-    settingsSheet.appendRow(['last_restore', getTimestamp_(), 'Last restore from backup']);
+    const settingsSheet = getDbSheet_(DB.SETTINGS)
+    settingsSheet.appendRow(['last_restore', getTimestamp_(), 'Last restore from backup'])
 
-    Logger.log(`Restore complete: ${JSON.stringify(restored)}`);
+    Logger.log(`Restore complete: ${JSON.stringify(restored)}`)
 
-    const message = `Återställning klar!
+    const message = `Restore complete!
 
-Återställt:
-• ${restored.posts} poster
-• ${restored.people} personer
-• ${restored.programs} program
-• ${restored.post_types} posttyper
-• ${restored.log} logg-rader
+Restored:
+• ${restored.posts} posts
+• ${restored.people} people
+• ${restored.programs} programmes
+• ${restored.post_types} post types
+• ${restored.log} log rows
 
-En säkerhetskopia skapades innan återställningen.`;
+A backup was created before the restore.`
 
-    return { success: true, message: message, restored: restored };
-
+    return { success: true, message: message, restored: restored }
   } catch (error) {
-    Logger.log(`Restore error: ${error.message}\n${error.stack}`);
-    return { success: false, error: error.message };
+    Logger.log(`Restore error: ${error.message}\n${error.stack}`)
+    return { success: false, error: error.message }
   }
 }
 
@@ -1896,8 +1983,8 @@ En säkerhetskopia skapades innan återställningen.`;
  * Export database to JSON (for backup/GitHub)
  */
 function exportDatabaseToJson() {
-  const ui = SpreadsheetApp.getUi();
-  
+  const ui = SpreadsheetApp.getUi()
+
   try {
     // Gather all database data
     const dbData = {
@@ -1908,13 +1995,14 @@ function exportDatabaseToJson() {
       programs: getDbSheet_(DB.PROGRAMS).getDataRange().getValues(),
       post_types: getDbSheet_(DB.POST_TYPES).getDataRange().getValues(),
       log: getDbSheet_(DB.LOG).getDataRange().getValues(),
-      settings: getDbSheet_(DB.SETTINGS).getDataRange().getValues()
-    };
-    
-    const json = JSON.stringify(dbData, null, 2);
-    
+      settings: getDbSheet_(DB.SETTINGS).getDataRange().getValues(),
+    }
+
+    const json = JSON.stringify(dbData, null, 2)
+
     // Show in dialogue for copy/paste
-    const html = HtmlService.createHtmlOutput(`
+    const html = HtmlService.createHtmlOutput(
+      `
       <style>
         body { font-family: monospace; font-size: 11px; }
         textarea { width: 100%; height: 500px; }
@@ -1923,13 +2011,13 @@ function exportDatabaseToJson() {
       <p>Copy this JSON and save it to your GitHub repository:</p>
       <textarea>${json}</textarea>
       <p><small>File suggestion: data/backup_${new Date().toISOString().split('T')[0]}.json</small></p>
-    `)
+    `,
+    )
       .setWidth(700)
-      .setHeight(650);
-    
-    ui.showModalDialog(html, 'Export Database');
-    
+      .setHeight(650)
+
+    ui.showModalDialog(html, 'Export Database')
   } catch (error) {
-    ui.alert('Export failed', error.message, ui.ButtonSet.OK);
+    ui.alert('Export failed', error.message, ui.ButtonSet.OK)
   }
 }

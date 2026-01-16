@@ -1,0 +1,178 @@
+name: Feature Request
+description: Suggest a new feature or enhancement for The Public Service
+title: '[Feature]: '
+labels: ['enhancement', 'triage']
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Feature Request
+
+        Thank you for suggesting an improvement to The Public Service. Well-considered feature requests help us prioritise development and build a better product.
+
+        Please take a moment to describe your idea thoroughly. The more context you provide, the better we can evaluate and implement your suggestion.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected Component
+      description: Which part of the system would this feature affect?
+      options:
+        - Apps Script (Google Workspace integration)
+        - Worker (Cloudflare Worker API)
+        - Studio PWA (Frontend application)
+        - Database (D1/KV storage layer)
+        - Documentation
+        - CI/CD Pipeline
+        - New Component (please specify)
+        - Multiple Components
+    validations:
+      required: true
+
+  - type: dropdown
+    id: request_type
+    attributes:
+      label: Request Type
+      description: What type of change are you proposing?
+      options:
+        - New Feature - Functionality that doesn't currently exist
+        - Enhancement - Improvement to existing functionality
+        - Integration - Connection with external service or tool
+        - Performance - Speed, efficiency, or resource optimisation
+        - Developer Experience - Tooling, documentation, or workflow improvement
+        - Accessibility - Improvements for users with disabilities
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: |
+        Describe the problem or limitation you're experiencing. What frustrates you about the current behaviour? What task are you trying to accomplish?
+
+        Focus on the problem, not the solution. Understanding the underlying need helps us design the best approach.
+      placeholder: |
+        As a [type of user], I need [goal] because [reason].
+
+        Currently, I have to [workaround], which is problematic because [pain points].
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: |
+        Describe your suggested solution. Be as specific as possible about how you envision this working.
+
+        Consider including:
+        - User interface changes
+        - API modifications
+        - Configuration options
+        - Integration points
+      placeholder: |
+        I propose [solution] which would work by [mechanism].
+
+        This would allow users to [benefit].
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: |
+        Describe any alternative solutions or features you've considered. Why is your proposed solution preferable to these alternatives?
+      placeholder: |
+        Alternative 1: [description] - Rejected because [reason]
+        Alternative 2: [description] - Rejected because [reason]
+
+        Current workaround: [description] - Insufficient because [reason]
+    validations:
+      required: false
+
+  - type: textarea
+    id: use_cases
+    attributes:
+      label: Use Cases
+      description: |
+        Provide specific examples of how this feature would be used. Real-world scenarios help us understand the value and design appropriate solutions.
+      placeholder: |
+        Use Case 1: [Scenario description]
+        - User action: [what they do]
+        - Expected outcome: [what happens]
+
+        Use Case 2: [Scenario description]
+        - User action: [what they do]
+        - Expected outcome: [what happens]
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Suggested Priority
+      description: How important is this feature to your workflow?
+      options:
+        - Critical - Cannot use the system effectively without this
+        - High - Significant impact on productivity
+        - Medium - Would improve workflow noticeably
+        - Low - Nice to have, minor improvement
+    validations:
+      required: true
+
+  - type: textarea
+    id: breaking_changes
+    attributes:
+      label: Breaking Changes
+      description: |
+        Would this feature require breaking changes to existing functionality, APIs, or data structures?
+      placeholder: |
+        - API changes: [describe any endpoint modifications]
+        - Data migration: [describe any schema changes]
+        - Configuration: [describe any config file changes]
+        - Backwards compatibility: [describe impact on existing users]
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: |
+        Add any other context, mockups, diagrams, or references that might help explain your feature request.
+
+        Consider including:
+        - Links to similar features in other products
+        - Mockups or wireframes
+        - Technical documentation or specifications
+        - Related discussions or issues
+      placeholder: |
+        [Paste images, links, or additional information here]
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution Interest
+      description: Would you be interested in contributing to this feature?
+      options:
+        - label: I am willing to submit a pull request implementing this feature
+          required: false
+        - label: I can provide additional testing or feedback during development
+          required: false
+        - label: I can help document this feature once implemented
+          required: false
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Submission Checklist
+      description: Please confirm the following before submitting.
+      options:
+        - label: I have searched existing issues and feature requests for duplicates
+          required: true
+        - label: I have clearly described the problem this feature would solve
+          required: true

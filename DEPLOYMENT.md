@@ -20,6 +20,7 @@
 2. **Create 6 new files** (click + next to Files):
 
    **File 1: Config.gs**
+
    ```
    1. Click + > Script
    2. Name it "Config"
@@ -28,6 +29,7 @@
    ```
 
    **File 2: Database.gs**
+
    ```
    1. Click + > Script
    2. Name it "Database"
@@ -36,6 +38,7 @@
    ```
 
    **File 3: Views.gs**
+
    ```
    1. Click + > Script
    2. Name it "Views"
@@ -44,6 +47,7 @@
    ```
 
    **File 4: UI.gs**
+
    ```
    1. Click + > Script
    2. Name it "UI"
@@ -52,6 +56,7 @@
    ```
 
    **File 5: Triggers.gs**
+
    ```
    1. Click + > Script
    2. Name it "Triggers"
@@ -60,6 +65,7 @@
    ```
 
    **File 6: Sync.gs**
+
    ```
    1. Click + > Script
    2. Name it "Sync"
@@ -99,6 +105,7 @@
 ### Complete
 
 You now have:
+
 - 7 hidden database sheets (`_DB_*`)
 - 4 programme views (`Program 1–4`)
 - 1 recording schedule
@@ -115,12 +122,12 @@ You now have:
 2. The sheet `_DB_Program` opens (now visible)
 3. Fill in rows 2–5 (Programmes 1–4):
 
-| program_nr | location | start_date | broadcast_date | church_year | prod_nr | target_length_sec | start_time | notes |
-|------------|----------|------------|----------------|-------------|---------|-------------------|------------|-------|
-| 1 | EXAMPLE CHURCH | 2025-01-30 | 2025-03-01 | 2nd Sunday in Lent | PROD-2025-001 | 2610 | 09:00:00 | |
-| 2 | EXAMPLE CHURCH | 2025-01-30 | 2025-03-08 | 3rd Sunday in Lent | PROD-2025-002 | 2610 | 09:00:00 | |
-| 3 | EXAMPLE CHURCH | 2025-01-30 | 2025-03-15 | 4th Sunday in Lent | PROD-2025-003 | 2610 | 09:00:00 | |
-| 4 | EXAMPLE CHURCH | 2025-01-30 | 2025-03-22 | 5th Sunday in Lent | PROD-2025-004 | 2610 | 09:00:00 | |
+| program_nr | location       | start_date | broadcast_date | church_year        | prod_nr       | target_length_sec | start_time | notes |
+| ---------- | -------------- | ---------- | -------------- | ------------------ | ------------- | ----------------- | ---------- | ----- |
+| 1          | EXAMPLE CHURCH | 2025-01-30 | 2025-03-01     | 2nd Sunday in Lent | PROD-2025-001 | 2610              | 09:00:00   |       |
+| 2          | EXAMPLE CHURCH | 2025-01-30 | 2025-03-08     | 3rd Sunday in Lent | PROD-2025-002 | 2610              | 09:00:00   |       |
+| 3          | EXAMPLE CHURCH | 2025-01-30 | 2025-03-15     | 4th Sunday in Lent | PROD-2025-003 | 2610              | 09:00:00   |       |
+| 4          | EXAMPLE CHURCH | 2025-01-30 | 2025-03-22     | 5th Sunday in Lent | PROD-2025-004 | 2610              | 09:00:00   |       |
 
 4. **target_length_sec** = target duration in seconds
    - 43:30 = 2610 seconds
@@ -167,6 +174,7 @@ You now have:
 ### Problem: Custom menu does not appear after Bootstrap
 
 **Solution:**
+
 1. Reload the page (F5)
 2. If still nothing: Go to Script Editor, select `onOpen` function, click Run
 3. Return to the Sheet and reload
@@ -179,6 +187,7 @@ Run **📋 System > 🚀 Bootstrap Database** again
 ### Problem: Views show no data
 
 **Solution:**
+
 1. Verify that posts exist in `_DB_Posts`
 2. Run **📋 System > 🔄 Generate All Views**
 3. Check that QUERY formulae in the views reference the correct sheets
@@ -186,6 +195,7 @@ Run **📋 System > 🚀 Bootstrap Database** again
 ### Problem: Edits in views do not update the database
 
 **Solution:**
+
 1. Check that triggers are installed
 2. Open Script Editor > Triggers (clock icon on the left)
 3. Verify that edit triggers exist
@@ -193,6 +203,7 @@ Run **📋 System > 🚀 Bootstrap Database** again
 ### Problem: Authorisation prompt appears repeatedly
 
 **Solution:**
+
 1. Clear browser cache
 2. Remove and re-authorise the script
 3. Check that you are using the same Google account
@@ -282,6 +293,7 @@ For teams requiring the advanced hybrid architecture (Supabase + Cloudflare Work
 **GitHub Issues:** https://github.com/FiLORUX/the-public-service/issues
 
 **Documentation:**
+
 - [README.md](README.md) – Overview and user guide
 - [API.md](API.md) – API documentation
 - [ARCHITECTURE-2026.md](ARCHITECTURE-2026.md) – Advanced architecture

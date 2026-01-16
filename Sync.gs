@@ -1,11 +1,11 @@
 /**
  * SUPABASE SYNC MODULE
- * Bi-direktionell synkronisering mellan Google Sheets och Supabase
+ * Bi-directional synchronisation between Google Sheets and Supabase
  *
- * Arkitektur:
- * - Google Sheets = UI + delning + mobil access
- * - Supabase = Source of truth med ACID, optimistic locking, historik
- * - Cloudflare Worker = Mellanhand för validering och konflikthantering
+ * Architecture:
+ * - Google Sheets = UI + sharing + mobile access
+ * - Supabase = Source of truth with ACID, optimistic locking, history
+ * - Cloudflare Worker = Middleware for validation and conflict handling
  */
 
 // ============================================================================
@@ -13,10 +13,10 @@
 // ============================================================================
 
 const SYNC_CONFIG = {
-  // Cloudflare Worker URL (sätts i Script Properties)
+  // Cloudflare Worker URL (set in Script Properties)
   WORKER_URL_KEY: 'SYNC_WORKER_URL',
 
-  // Webhook secret för autentisering
+  // Webhook secret for authentication
   WEBHOOK_SECRET_KEY: 'SYNC_WEBHOOK_SECRET',
 
   // Sync mode
@@ -27,8 +27,8 @@ const SYNC_CONFIG = {
 
   // Retry
   MAX_RETRIES: 3,
-  RETRY_DELAY_MS: 1000
-};
+  RETRY_DELAY_MS: 1000,
+}
 
 // ============================================================================
 // SYNC STATUS TRACKING
@@ -38,39 +38,39 @@ const SYNC_CONFIG = {
  * Check if sync is enabled
  */
 function isSyncEnabled_() {
-  const props = PropertiesService.getScriptProperties();
-  return props.getProperty(SYNC_CONFIG.ENABLED_KEY) === 'true';
+  const props = PropertiesService.getScriptProperties()
+  return props.getProperty(SYNC_CONFIG.ENABLED_KEY) === 'true'
 }
 
 /**
  * Enable/disable sync
  */
 function setSyncEnabled(enabled) {
-  const props = PropertiesService.getScriptProperties();
-  props.setProperty(SYNC_CONFIG.ENABLED_KEY, enabled ? 'true' : 'false');
-  Logger.log(`Sync ${enabled ? 'enabled' : 'disabled'}`);
+  const props = PropertiesService.getScriptProperties()
+  props.setProperty(SYNC_CONFIG.ENABLED_KEY, enabled ? 'true' : 'false')
+  Logger.log(`Sync ${enabled ? 'enabled' : 'disabled'}`)
 }
 
 /**
  * Get Worker URL
  */
 function getWorkerUrl_() {
-  const props = PropertiesService.getScriptProperties();
-  const url = props.getProperty(SYNC_CONFIG.WORKER_URL_KEY);
+  const props = PropertiesService.getScriptProperties()
+  const url = props.getProperty(SYNC_CONFIG.WORKER_URL_KEY)
 
   if (!url) {
-    throw new Error('SYNC_WORKER_URL not configured. Set it in Script Properties.');
+    throw new Error('SYNC_WORKER_URL not configured. Set it in Script Properties.')
   }
 
-  return url;
+  return url
 }
 
 /**
  * Get webhook secret
  */
 function getWebhookSecret_() {
-  const props = PropertiesService.getScriptProperties();
-  return props.getProperty(SYNC_CONFIG.WEBHOOK_SECRET_KEY) || '';
+  const props = PropertiesService.getScriptProperties()
+  return props.getProperty(SYNC_CONFIG.WEBHOOK_SECRET_KEY) || ''
 }
 
 // ============================================================================
@@ -82,40 +82,41 @@ function getWebhookSecret_() {
  * Called after createPost, updatePost, deletePost
  */
 function syncPostToSupabase_(action, postData, version) {
-  if (!isSyncEnabled_()) return { success: true, skipped: true };
+  if (!isSyncEnabled_()) return { success: true, skipped: true }
 
   try {
     const payload = {
       source: 'sheets',
-      action: action,  // 'create', 'update', 'delete'
+      action: action, // 'create', 'update', 'delete'
       entity_type: 'post',
       data: postData,
       version: version,
-      timestamp: new Date().toISOString()
-    };
+      timestamp: new Date().toISOString(),
+    }
 
-    const response = sendToWorker_('/sync/from-sheets', payload);
+    const response = sendToWorker_('/sync/from-sheets', payload)
 
     if (!response.success) {
       // Handle conflict
       if (response.error === 'Conflict') {
-        Logger.log(`Sync conflict for ${postData.post_id}: server version ${response.server_version}, our version ${version}`);
+        Logger.log(
+          `Sync conflict for ${postData.post_id}: server version ${response.server_version}, our version ${version}`,
+        )
         return {
           success: false,
           conflict: true,
-          serverVersion: response.server_version
-        };
+          serverVersion: response.server_version,
+        }
       }
 
-      Logger.log(`Sync failed: ${response.error}`);
-      return { success: false, error: response.error };
+      Logger.log(`Sync failed: ${response.error}`)
+      return { success: false, error: response.error }
     }
 
-    return { success: true, data: response.data };
-
+    return { success: true, data: response.data }
   } catch (error) {
-    Logger.log(`Sync error: ${error.message}`);
-    return { success: false, error: error.message };
+    Logger.log(`Sync error: ${error.message}`)
+    return { success: false, error: error.message }
   }
 }
 
@@ -124,19 +125,19 @@ function syncPostToSupabase_(action, postData, version) {
  */
 function syncProgramToSupabase(programNr) {
   if (!isSyncEnabled_()) {
-    SpreadsheetApp.getUi().alert('Sync är inte aktiverat. Konfigurera Worker-URL först.');
-    return;
+    SpreadsheetApp.getUi().alert('Sync is not enabled. Configure Worker URL first.')
+    return
   }
 
-  const posts = getPostsByProgram_(programNr);
+  const posts = getPostsByProgram_(programNr)
 
   if (posts.length === 0) {
-    SpreadsheetApp.getUi().alert(`Inga poster i Program ${programNr}`);
-    return;
+    SpreadsheetApp.getUi().alert(`No posts in Programme ${programNr}`)
+    return
   }
 
   // Convert to Supabase format
-  const supabasePosts = posts.map(post => convertPostToSupabaseFormat_(post));
+  const supabasePosts = posts.map((post) => convertPostToSupabaseFormat_(post))
 
   try {
     const payload = {
@@ -144,20 +145,19 @@ function syncProgramToSupabase(programNr) {
       action: 'batch_sync',
       entity_type: 'post',
       data: supabasePosts,
-      timestamp: new Date().toISOString()
-    };
-
-    const response = sendToWorker_('/sync/from-sheets', payload);
-
-    if (response.success) {
-      const msg = `Sync klar!\n\nSkapade: ${response.results.created}\nUppdaterade: ${response.results.updated}\nKonflikter: ${response.results.conflicts.length}`;
-      SpreadsheetApp.getUi().alert(msg);
-    } else {
-      SpreadsheetApp.getUi().alert(`Sync misslyckades: ${response.error}`);
+      timestamp: new Date().toISOString(),
     }
 
+    const response = sendToWorker_('/sync/from-sheets', payload)
+
+    if (response.success) {
+      const msg = `Sync complete!\n\nCreated: ${response.results.created}\nUpdated: ${response.results.updated}\nConflicts: ${response.results.conflicts.length}`
+      SpreadsheetApp.getUi().alert(msg)
+    } else {
+      SpreadsheetApp.getUi().alert(`Sync failed: ${response.error}`)
+    }
   } catch (error) {
-    SpreadsheetApp.getUi().alert(`Sync fel: ${error.message}`);
+    SpreadsheetApp.getUi().alert(`Sync error: ${error.message}`)
   }
 }
 
@@ -166,28 +166,28 @@ function syncProgramToSupabase(programNr) {
  */
 function fullSyncToSupabase() {
   if (!isSyncEnabled_()) {
-    SpreadsheetApp.getUi().alert('Sync är inte aktiverat.');
-    return;
+    SpreadsheetApp.getUi().alert('Sync is not enabled.')
+    return
   }
 
-  const ui = SpreadsheetApp.getUi();
+  const ui = SpreadsheetApp.getUi()
   const confirm = ui.alert(
-    'Full Sync till Supabase',
-    'Detta synkroniserar ALLA poster till Supabase. Fortsätt?',
-    ui.ButtonSet.YES_NO
-  );
+    'Full Sync to Supabase',
+    'This will synchronise ALL posts to Supabase. Continue?',
+    ui.ButtonSet.YES_NO,
+  )
 
-  if (confirm !== ui.Button.YES) return;
+  if (confirm !== ui.Button.YES) return
 
-  let totalCreated = 0;
-  let totalUpdated = 0;
-  let totalConflicts = 0;
+  let totalCreated = 0
+  let totalUpdated = 0
+  let totalConflicts = 0
 
   for (let programNr = 1; programNr <= 4; programNr++) {
-    const posts = getPostsByProgram_(programNr);
-    if (posts.length === 0) continue;
+    const posts = getPostsByProgram_(programNr)
+    if (posts.length === 0) continue
 
-    const supabasePosts = posts.map(post => convertPostToSupabaseFormat_(post));
+    const supabasePosts = posts.map((post) => convertPostToSupabaseFormat_(post))
 
     try {
       const response = sendToWorker_('/sync/from-sheets', {
@@ -195,20 +195,22 @@ function fullSyncToSupabase() {
         action: 'batch_sync',
         entity_type: 'post',
         data: supabasePosts,
-        timestamp: new Date().toISOString()
-      });
+        timestamp: new Date().toISOString(),
+      })
 
       if (response.success) {
-        totalCreated += response.results.created;
-        totalUpdated += response.results.updated;
-        totalConflicts += response.results.conflicts.length;
+        totalCreated += response.results.created
+        totalUpdated += response.results.updated
+        totalConflicts += response.results.conflicts.length
       }
     } catch (error) {
-      Logger.log(`Sync error for program ${programNr}: ${error.message}`);
+      Logger.log(`Sync error for program ${programNr}: ${error.message}`)
     }
   }
 
-  ui.alert(`Full Sync Klar!\n\nSkapade: ${totalCreated}\nUppdaterade: ${totalUpdated}\nKonflikter: ${totalConflicts}`);
+  ui.alert(
+    `Full Sync Complete!\n\nCreated: ${totalCreated}\nUpdated: ${totalUpdated}\nConflicts: ${totalConflicts}`,
+  )
 }
 
 // ============================================================================
@@ -221,39 +223,41 @@ function fullSyncToSupabase() {
  */
 function handleSupabaseWebhook(e) {
   // Verify webhook secret
-  const secret = e.parameter.secret || '';
+  const secret = e.parameter.secret || ''
   if (secret !== getWebhookSecret_()) {
-    return ContentService.createTextOutput(JSON.stringify({ error: 'Unauthorized' }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(JSON.stringify({ error: 'Unauthorized' })).setMimeType(
+      ContentService.MimeType.JSON,
+    )
   }
 
   try {
-    const payload = JSON.parse(e.postData.contents);
+    const payload = JSON.parse(e.postData.contents)
 
     switch (payload.action) {
       case 'update':
-        handleInboundUpdate_(payload.data);
-        break;
+        handleInboundUpdate_(payload.data)
+        break
 
       case 'create':
-        handleInboundCreate_(payload.data);
-        break;
+        handleInboundCreate_(payload.data)
+        break
 
       case 'delete':
-        handleInboundDelete_(payload.data.post_id);
-        break;
+        handleInboundDelete_(payload.data.post_id)
+        break
 
       default:
-        Logger.log(`Unknown webhook action: ${payload.action}`);
+        Logger.log(`Unknown webhook action: ${payload.action}`)
     }
 
-    return ContentService.createTextOutput(JSON.stringify({ success: true }))
-      .setMimeType(ContentService.MimeType.JSON);
-
+    return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(
+      ContentService.MimeType.JSON,
+    )
   } catch (error) {
-    Logger.log(`Webhook error: ${error.message}`);
-    return ContentService.createTextOutput(JSON.stringify({ error: error.message }))
-      .setMimeType(ContentService.MimeType.JSON);
+    Logger.log(`Webhook error: ${error.message}`)
+    return ContentService.createTextOutput(JSON.stringify({ error: error.message })).setMimeType(
+      ContentService.MimeType.JSON,
+    )
   }
 }
 
@@ -261,59 +265,59 @@ function handleSupabaseWebhook(e) {
  * Handle inbound update from Supabase
  */
 function handleInboundUpdate_(data) {
-  const sheet = getDbSheet_(DB.POSTS);
-  const allData = sheet.getDataRange().getValues();
+  const sheet = getDbSheet_(DB.POSTS)
+  const allData = sheet.getDataRange().getValues()
 
   // Find row with matching post_id
   for (let i = 1; i < allData.length; i++) {
     if (allData[i][POST_SCHEMA.ID] === data.post_id) {
       // Convert Supabase format back to Sheets format
-      const updates = convertSupabaseToSheetsFormat_(data);
+      const updates = convertSupabaseToSheetsFormat_(data)
 
       // Update each field
       for (const [field, value] of Object.entries(updates)) {
-        const colIndex = POST_SCHEMA[field.toUpperCase()];
+        const colIndex = POST_SCHEMA[field.toUpperCase()]
         if (colIndex !== undefined) {
-          sheet.getRange(i + 1, colIndex + 1).setValue(value);
+          sheet.getRange(i + 1, colIndex + 1).setValue(value)
         }
       }
 
       // Update modified timestamp
-      sheet.getRange(i + 1, POST_SCHEMA.MODIFIED + 1).setValue(getTimestamp_());
+      sheet.getRange(i + 1, POST_SCHEMA.MODIFIED + 1).setValue(getTimestamp_())
 
-      Logger.log(`Inbound update applied: ${data.post_id}`);
-      return;
+      Logger.log(`Inbound update applied: ${data.post_id}`)
+      return
     }
   }
 
-  Logger.log(`Inbound update: post ${data.post_id} not found`);
+  Logger.log(`Inbound update: post ${data.post_id} not found`)
 }
 
 /**
  * Handle inbound create from Supabase
  */
 function handleInboundCreate_(data) {
-  const sheetsData = convertSupabaseToSheetsFormat_(data);
+  const sheetsData = convertSupabaseToSheetsFormat_(data)
 
   // Check if already exists
-  const existing = getPostById_(data.post_id);
+  const existing = getPostById_(data.post_id)
   if (existing) {
-    Logger.log(`Inbound create: post ${data.post_id} already exists, treating as update`);
-    handleInboundUpdate_(data);
-    return;
+    Logger.log(`Inbound create: post ${data.post_id} already exists, treating as update`)
+    handleInboundUpdate_(data)
+    return
   }
 
   // Create new post
-  const sheet = getDbSheet_(DB.POSTS);
-  const newRow = [];
+  const sheet = getDbSheet_(DB.POSTS)
+  const newRow = []
 
   for (let i = 0; i < POST_HEADERS.length; i++) {
-    const header = POST_HEADERS[i];
-    newRow.push(sheetsData[header] || '');
+    const header = POST_HEADERS[i]
+    newRow.push(sheetsData[header] || '')
   }
 
-  sheet.appendRow(newRow);
-  Logger.log(`Inbound create: ${data.post_id}`);
+  sheet.appendRow(newRow)
+  Logger.log(`Inbound create: ${data.post_id}`)
 }
 
 /**
@@ -321,8 +325,8 @@ function handleInboundCreate_(data) {
  */
 function handleInboundDelete_(postId) {
   // Use soft-delete to match our system
-  deletePost(postId, false);
-  Logger.log(`Inbound delete: ${postId}`);
+  deletePost(postId, false)
+  Logger.log(`Inbound delete: ${postId}`)
 }
 
 // ============================================================================
@@ -340,21 +344,21 @@ function convertPostToSupabaseFormat_(post) {
     type_key: post.type || null,
     title: post.title || null,
     duration_sec: parseInt(post.duration_sec) || 60,
-    people_ids: post.people_ids ? post.people_ids.split(',').map(s => s.trim()) : [],
+    people_ids: post.people_ids ? post.people_ids.split(',').map((s) => s.trim()) : [],
     location: post.location || null,
     text_author: post.text_author || null,
     composer: post.composer || null,
     arranger: post.arranger || null,
-    recording_day: post.recording_day || 'dag1',
+    recording_day: post.recording_day || 'day1',
     recording_time: post.recording_time || null,
-    status: post.status || 'planerad',
+    status: post.status || 'planned',
     info_pos: post.info_pos || null,
     graphics: post.graphics || null,
     notes: post.notes || null,
     open_text: isTruthy_(post.open_text),
-    version: 1,  // Will be set by Supabase
-    last_modified_by: 'sheets'
-  };
+    version: 1, // Will be set by Supabase
+    last_modified_by: 'sheets',
+  }
 }
 
 /**
@@ -380,8 +384,8 @@ function convertSupabaseToSheetsFormat_(data) {
     graphics: data.graphics,
     notes: data.notes,
     open_text: data.open_text ? 'TRUE' : 'FALSE',
-    modified: getTimestamp_()
-  };
+    modified: getTimestamp_(),
+  }
 }
 
 // ============================================================================
@@ -392,50 +396,49 @@ function convertSupabaseToSheetsFormat_(data) {
  * Send request to Cloudflare Worker
  */
 function sendToWorker_(endpoint, payload) {
-  const workerUrl = getWorkerUrl_();
-  const secret = getWebhookSecret_();
+  const workerUrl = getWorkerUrl_()
+  const secret = getWebhookSecret_()
 
   const options = {
     method: 'post',
     contentType: 'application/json',
     headers: {
-      'X-Webhook-Secret': secret
+      'X-Webhook-Secret': secret,
     },
     payload: JSON.stringify(payload),
-    muteHttpExceptions: true
-  };
+    muteHttpExceptions: true,
+  }
 
-  let lastError;
+  let lastError
 
   for (let attempt = 1; attempt <= SYNC_CONFIG.MAX_RETRIES; attempt++) {
     try {
-      const response = UrlFetchApp.fetch(workerUrl + endpoint, options);
-      const status = response.getResponseCode();
-      const body = JSON.parse(response.getContentText());
+      const response = UrlFetchApp.fetch(workerUrl + endpoint, options)
+      const status = response.getResponseCode()
+      const body = JSON.parse(response.getContentText())
 
       if (status >= 200 && status < 300) {
-        return body;
+        return body
       }
 
       // Handle specific error codes
       if (status === 409) {
         // Conflict - don't retry
-        return body;
+        return body
       }
 
-      lastError = new Error(`HTTP ${status}: ${body.error || 'Unknown error'}`);
-
+      lastError = new Error(`HTTP ${status}: ${body.error || 'Unknown error'}`)
     } catch (error) {
-      lastError = error;
+      lastError = error
     }
 
     // Wait before retry
     if (attempt < SYNC_CONFIG.MAX_RETRIES) {
-      Utilities.sleep(SYNC_CONFIG.RETRY_DELAY_MS * attempt);
+      Utilities.sleep(SYNC_CONFIG.RETRY_DELAY_MS * attempt)
     }
   }
 
-  throw lastError;
+  throw lastError
 }
 
 // ============================================================================
@@ -446,7 +449,8 @@ function sendToWorker_(endpoint, payload) {
  * Show conflict resolution dialog
  */
 function showConflictDialog_(postId, localData, serverData) {
-  const html = HtmlService.createHtmlOutput(`
+  const html = HtmlService.createHtmlOutput(
+    `
     <style>
       body { font-family: 'Google Sans', Arial, sans-serif; padding: 16px; }
       h2 { color: #d32f2f; }
@@ -464,29 +468,29 @@ function showConflictDialog_(postId, localData, serverData) {
       .merge { background: #ff9800; color: white; }
     </style>
 
-    <h2>Synkroniseringskonflikt</h2>
-    <p>Post <strong>${postId}</strong> har ändrats på båda sidor.</p>
+    <h2>Synchronisation Conflict</h2>
+    <p>Post <strong>${postId}</strong> has been changed on both sides.</p>
 
     <div class="comparison">
       <div class="version">
-        <h3>Din version (Sheets)</h3>
+        <h3>Your version (Sheets)</h3>
         ${renderVersionFields_(localData)}
       </div>
       <div class="version">
-        <h3>Server-version (Supabase)</h3>
+        <h3>Server version (Supabase)</h3>
         ${renderVersionFields_(serverData)}
       </div>
     </div>
 
     <div class="buttons">
       <button class="keep-local" onclick="google.script.run.resolveConflict('${postId}', 'keep_local')">
-        Behåll min version
+        Keep my version
       </button>
       <button class="use-server" onclick="google.script.run.resolveConflict('${postId}', 'use_server')">
-        Använd server-version
+        Use server version
       </button>
       <button class="merge" onclick="google.script.run.resolveConflict('${postId}', 'merge')">
-        Slå ihop (senaste per fält)
+        Merge (latest per field)
       </button>
     </div>
 
@@ -494,21 +498,26 @@ function showConflictDialog_(postId, localData, serverData) {
       // Close dialog after resolution
       google.script.host.close();
     </script>
-  `)
-  .setWidth(700)
-  .setHeight(500);
+  `,
+  )
+    .setWidth(700)
+    .setHeight(500)
 
-  SpreadsheetApp.getUi().showModalDialog(html, 'Synkroniseringskonflikt');
+  SpreadsheetApp.getUi().showModalDialog(html, 'Synchronisation Conflict')
 }
 
 function renderVersionFields_(data) {
-  const fields = ['title', 'duration_sec', 'status', 'notes'];
-  return fields.map(f => `
+  const fields = ['title', 'duration_sec', 'status', 'notes']
+  return fields
+    .map(
+      (f) => `
     <div class="field">
       <div class="label">${f}</div>
-      <div class="value">${data[f] || '(tom)'}</div>
+      <div class="value">${data[f] || '(empty)'}</div>
     </div>
-  `).join('');
+  `,
+    )
+    .join('')
 }
 
 /**
@@ -518,32 +527,32 @@ function resolveConflict(postId, strategy) {
   switch (strategy) {
     case 'keep_local':
       // Force push local version with incremented version
-      const localPost = getPostById_(postId);
-      syncPostToSupabase_('update', localPost, null);  // null = force
-      break;
+      const localPost = getPostById_(postId)
+      syncPostToSupabase_('update', localPost, null) // null = force
+      break
 
     case 'use_server':
       // Pull server version and overwrite local
-      pullPostFromSupabase_(postId);
-      break;
+      pullPostFromSupabase_(postId)
+      break
 
     case 'merge':
       // Use server for base, apply local changes where local is newer
-      mergePost_(postId);
-      break;
+      mergePost_(postId)
+      break
   }
 
-  SpreadsheetApp.getActiveSpreadsheet().toast(`Konflikt löst för ${postId}`, 'Sync', 3);
+  SpreadsheetApp.getActiveSpreadsheet().toast(`Conflict resolved for ${postId}`, 'Sync', 3)
 }
 
 /**
  * Pull single post from Supabase
  */
 function pullPostFromSupabase_(postId) {
-  const response = sendToWorker_('/api/post?id=' + encodeURIComponent(postId), {});
+  const response = sendToWorker_('/api/post?id=' + encodeURIComponent(postId), {})
 
   if (response.success && response.post) {
-    handleInboundUpdate_(response.post);
+    handleInboundUpdate_(response.post)
   }
 }
 
@@ -554,7 +563,7 @@ function pullPostFromSupabase_(postId) {
 function mergePost_(postId) {
   // For now, just use server version
   // TODO: Implement proper field-level merge based on timestamps
-  pullPostFromSupabase_(postId);
+  pullPostFromSupabase_(postId)
 }
 
 // ============================================================================
@@ -565,12 +574,13 @@ function mergePost_(postId) {
  * Show sync configuration dialog
  */
 function showSyncConfigDialog() {
-  const props = PropertiesService.getScriptProperties();
-  const currentUrl = props.getProperty(SYNC_CONFIG.WORKER_URL_KEY) || '';
-  const currentSecret = props.getProperty(SYNC_CONFIG.WEBHOOK_SECRET_KEY) || '';
-  const isEnabled = props.getProperty(SYNC_CONFIG.ENABLED_KEY) === 'true';
+  const props = PropertiesService.getScriptProperties()
+  const currentUrl = props.getProperty(SYNC_CONFIG.WORKER_URL_KEY) || ''
+  const currentSecret = props.getProperty(SYNC_CONFIG.WEBHOOK_SECRET_KEY) || ''
+  const isEnabled = props.getProperty(SYNC_CONFIG.ENABLED_KEY) === 'true'
 
-  const html = HtmlService.createHtmlOutput(`
+  const html = HtmlService.createHtmlOutput(
+    `
     <style>
       body { font-family: 'Google Sans', Arial, sans-serif; padding: 20px; max-width: 500px; }
       h2 { color: #1a73e8; margin-bottom: 20px; }
@@ -588,29 +598,29 @@ function showSyncConfigDialog() {
       .test { background: #34a853; color: white; }
     </style>
 
-    <h2>Supabase Sync Konfiguration</h2>
+    <h2>Supabase Sync Configuration</h2>
 
     <div class="field">
       <label>Cloudflare Worker URL</label>
-      <input type="text" id="workerUrl" value="${currentUrl}" placeholder="https://gudstjanst-sync.workers.dev">
-      <div class="info">URL till din deployade Cloudflare Worker</div>
+      <input type="text" id="workerUrl" value="${currentUrl}" placeholder="https://church-service-sync.workers.dev">
+      <div class="info">URL to your deployed Cloudflare Worker</div>
     </div>
 
     <div class="field">
       <label>Webhook Secret</label>
-      <input type="password" id="secret" value="${currentSecret}" placeholder="din-hemliga-nyckel">
-      <div class="info">Samma nyckel som är konfigurerad i Worker</div>
+      <input type="password" id="secret" value="${currentSecret}" placeholder="your-secret-key">
+      <div class="info">Same key configured in Worker</div>
     </div>
 
     <div class="field checkbox-field">
       <input type="checkbox" id="enabled" ${isEnabled ? 'checked' : ''}>
-      <label for="enabled">Aktivera synkronisering</label>
+      <label for="enabled">Enable synchronisation</label>
     </div>
 
     <div class="buttons">
-      <button class="save" onclick="saveConfig()">Spara</button>
-      <button class="test" onclick="testConnection()">Testa anslutning</button>
-      <button class="cancel" onclick="google.script.host.close()">Avbryt</button>
+      <button class="save" onclick="saveConfig()">Save</button>
+      <button class="test" onclick="testConnection()">Test connection</button>
+      <button class="cancel" onclick="google.script.host.close()">Cancel</button>
     </div>
 
     <script>
@@ -621,10 +631,10 @@ function showSyncConfigDialog() {
 
         google.script.run
           .withSuccessHandler(() => {
-            alert('Konfiguration sparad!');
+            alert('Configuration saved!');
             google.script.host.close();
           })
-          .withFailureHandler(err => alert('Fel: ' + err))
+          .withFailureHandler(err => alert('Error: ' + err))
           .saveSyncConfig(url, secret, enabled);
       }
 
@@ -634,28 +644,29 @@ function showSyncConfigDialog() {
 
         google.script.run
           .withSuccessHandler(result => alert(result))
-          .withFailureHandler(err => alert('Fel: ' + err))
+          .withFailureHandler(err => alert('Error: ' + err))
           .testSyncConnection(url, secret);
       }
     </script>
-  `)
-  .setWidth(550)
-  .setHeight(400);
+  `,
+  )
+    .setWidth(550)
+    .setHeight(400)
 
-  SpreadsheetApp.getUi().showModalDialog(html, 'Sync-konfiguration');
+  SpreadsheetApp.getUi().showModalDialog(html, 'Sync Configuration')
 }
 
 /**
  * Save sync configuration
  */
 function saveSyncConfig(url, secret, enabled) {
-  const props = PropertiesService.getScriptProperties();
+  const props = PropertiesService.getScriptProperties()
 
-  props.setProperty(SYNC_CONFIG.WORKER_URL_KEY, url);
-  props.setProperty(SYNC_CONFIG.WEBHOOK_SECRET_KEY, secret);
-  props.setProperty(SYNC_CONFIG.ENABLED_KEY, enabled ? 'true' : 'false');
+  props.setProperty(SYNC_CONFIG.WORKER_URL_KEY, url)
+  props.setProperty(SYNC_CONFIG.WEBHOOK_SECRET_KEY, secret)
+  props.setProperty(SYNC_CONFIG.ENABLED_KEY, enabled ? 'true' : 'false')
 
-  Logger.log(`Sync config saved. Enabled: ${enabled}`);
+  Logger.log(`Sync config saved. Enabled: ${enabled}`)
 }
 
 /**
@@ -666,21 +677,20 @@ function testSyncConnection(url, secret) {
     const options = {
       method: 'get',
       headers: { 'X-Webhook-Secret': secret },
-      muteHttpExceptions: true
-    };
-
-    const response = UrlFetchApp.fetch(url + '/health', options);
-    const status = response.getResponseCode();
-    const body = response.getContentText();
-
-    if (status === 200) {
-      return 'Anslutning OK! Worker svarar korrekt.';
-    } else {
-      return `Fel: HTTP ${status} - ${body}`;
+      muteHttpExceptions: true,
     }
 
+    const response = UrlFetchApp.fetch(url + '/health', options)
+    const status = response.getResponseCode()
+    const body = response.getContentText()
+
+    if (status === 200) {
+      return 'Connection OK! Worker responding correctly.'
+    } else {
+      return `Error: HTTP ${status} - ${body}`
+    }
   } catch (error) {
-    return `Anslutningsfel: ${error.message}`;
+    return `Connection error: ${error.message}`
   }
 }
 
@@ -696,16 +706,13 @@ function installSyncTriggers() {
   // onEdit trigger already exists, we hook into it
   // This is just for periodic full sync if needed
 
-  const triggers = ScriptApp.getProjectTriggers();
-  const hasSyncTrigger = triggers.some(t => t.getHandlerFunction() === 'periodicSync');
+  const triggers = ScriptApp.getProjectTriggers()
+  const hasSyncTrigger = triggers.some((t) => t.getHandlerFunction() === 'periodicSync')
 
   if (!hasSyncTrigger) {
-    ScriptApp.newTrigger('periodicSync')
-      .timeBased()
-      .everyHours(1)
-      .create();
+    ScriptApp.newTrigger('periodicSync').timeBased().everyHours(1).create()
 
-    Logger.log('Periodic sync trigger installed (every hour)');
+    Logger.log('Periodic sync trigger installed (every hour)')
   }
 }
 
@@ -714,17 +721,17 @@ function installSyncTriggers() {
  * Catches any missed changes
  */
 function periodicSync() {
-  if (!isSyncEnabled_()) return;
+  if (!isSyncEnabled_()) return
 
   // Get last sync time
-  const props = PropertiesService.getScriptProperties();
-  const lastSync = props.getProperty('LAST_PERIODIC_SYNC') || '1970-01-01T00:00:00Z';
+  const props = PropertiesService.getScriptProperties()
+  const lastSync = props.getProperty('LAST_PERIODIC_SYNC') || '1970-01-01T00:00:00Z'
 
   // For now, just log
-  Logger.log(`Periodic sync running. Last sync: ${lastSync}`);
+  Logger.log(`Periodic sync running. Last sync: ${lastSync}`)
 
   // Update last sync time
-  props.setProperty('LAST_PERIODIC_SYNC', new Date().toISOString());
+  props.setProperty('LAST_PERIODIC_SYNC', new Date().toISOString())
 }
 
 // ============================================================================
@@ -735,54 +742,57 @@ function periodicSync() {
  * Show sync status dialog with live information
  */
 function showSyncStatusDialog() {
-  const props = PropertiesService.getScriptProperties();
-  const isEnabled = props.getProperty(SYNC_CONFIG.ENABLED_KEY) === 'true';
-  const workerUrl = props.getProperty(SYNC_CONFIG.WORKER_URL_KEY) || '(ej konfigurerad)';
-  const lastSync = props.getProperty('LAST_PERIODIC_SYNC') || 'Aldrig';
-  const apiSecret = props.getProperty('API_SECRET') ? 'Konfigurerad' : 'Ej satt';
+  const props = PropertiesService.getScriptProperties()
+  const isEnabled = props.getProperty(SYNC_CONFIG.ENABLED_KEY) === 'true'
+  const workerUrl = props.getProperty(SYNC_CONFIG.WORKER_URL_KEY) || '(not configured)'
+  const lastSync = props.getProperty('LAST_PERIODIC_SYNC') || 'Never'
+  const apiSecret = props.getProperty('API_SECRET') ? 'Configured' : 'Not set'
 
   // Test connection status
-  let connectionStatus = 'Okänd';
-  let connectionColor = '#666';
+  let connectionStatus = 'Unknown'
+  let connectionColor = '#666'
 
-  if (isEnabled && workerUrl !== '(ej konfigurerad)') {
+  if (isEnabled && workerUrl !== '(not configured)') {
     try {
-      const secret = props.getProperty(SYNC_CONFIG.WEBHOOK_SECRET_KEY) || '';
+      const secret = props.getProperty(SYNC_CONFIG.WEBHOOK_SECRET_KEY) || ''
       const response = UrlFetchApp.fetch(workerUrl + '/health', {
         method: 'get',
         headers: { 'X-Webhook-Secret': secret },
-        muteHttpExceptions: true
-      });
+        muteHttpExceptions: true,
+      })
 
       if (response.getResponseCode() === 200) {
-        connectionStatus = 'Ansluten';
-        connectionColor = '#34a853';
+        connectionStatus = 'Connected'
+        connectionColor = '#34a853'
       } else {
-        connectionStatus = 'Fel: HTTP ' + response.getResponseCode();
-        connectionColor = '#ea4335';
+        connectionStatus = 'Error: HTTP ' + response.getResponseCode()
+        connectionColor = '#ea4335'
       }
     } catch (e) {
-      connectionStatus = 'Ej nåbar';
-      connectionColor = '#ea4335';
+      connectionStatus = 'Unreachable'
+      connectionColor = '#ea4335'
     }
   }
 
   // Get post counts
-  let postCounts = { total: 0, p1: 0, p2: 0, p3: 0, p4: 0 };
+  let postCounts = { total: 0, p1: 0, p2: 0, p3: 0, p4: 0 }
   try {
-    const sheet = getDbSheet_(DB.POSTS);
-    const data = sheet.getDataRange().getValues();
+    const sheet = getDbSheet_(DB.POSTS)
+    const data = sheet.getDataRange().getValues()
     for (let i = 1; i < data.length; i++) {
-      const pn = data[i][POST_SCHEMA.PROGRAM_NR];
-      postCounts.total++;
-      if (pn === 1) postCounts.p1++;
-      else if (pn === 2) postCounts.p2++;
-      else if (pn === 3) postCounts.p3++;
-      else if (pn === 4) postCounts.p4++;
+      const pn = data[i][POST_SCHEMA.PROGRAM_NR]
+      postCounts.total++
+      if (pn === 1) postCounts.p1++
+      else if (pn === 2) postCounts.p2++
+      else if (pn === 3) postCounts.p3++
+      else if (pn === 4) postCounts.p4++
     }
-  } catch (e) { /* ignore */ }
+  } catch (e) {
+    /* ignore */
+  }
 
-  const html = HtmlService.createHtmlOutput(`
+  const html = HtmlService.createHtmlOutput(
+    `
     <style>
       body { font-family: 'Google Sans', Arial, sans-serif; padding: 20px; }
       h2 { color: #1a73e8; margin-bottom: 24px; }
@@ -805,17 +815,17 @@ function showSyncStatusDialog() {
       .secondary { background: #f1f3f4; }
     </style>
 
-    <h2>Integrationsstatus</h2>
+    <h2>Integration Status</h2>
 
     <div class="status-grid">
       <div class="status-card">
         <h3>Supabase Sync</h3>
         <div class="status-value ${isEnabled ? 'enabled' : 'disabled'}">
-          ${isEnabled ? '✓ Aktiverad' : '✗ Inaktiverad'}
+          ${isEnabled ? '✓ Enabled' : '✗ Disabled'}
         </div>
       </div>
       <div class="status-card">
-        <h3>Worker-anslutning</h3>
+        <h3>Worker Connection</h3>
         <div class="status-value">
           <span class="connection-indicator" style="background: ${connectionColor}"></span>
           ${connectionStatus}
@@ -824,36 +834,37 @@ function showSyncStatusDialog() {
     </div>
 
     <div class="section">
-      <h3>Konfiguration</h3>
+      <h3>Configuration</h3>
       <table>
         <tr><td>Worker URL</td><td>${workerUrl}</td></tr>
-        <tr><td>Senaste sync</td><td>${lastSync}</td></tr>
-        <tr><td>Intern API-nyckel</td><td>${apiSecret}</td></tr>
+        <tr><td>Last sync</td><td>${lastSync}</td></tr>
+        <tr><td>Internal API key</td><td>${apiSecret}</td></tr>
       </table>
     </div>
 
     <div class="section">
-      <h3>Data i Sheets</h3>
+      <h3>Data in Sheets</h3>
       <table>
-        <tr><td>Totalt antal poster</td><td>${postCounts.total}</td></tr>
-        <tr><td>Program 1</td><td>${postCounts.p1} poster</td></tr>
-        <tr><td>Program 2</td><td>${postCounts.p2} poster</td></tr>
-        <tr><td>Program 3</td><td>${postCounts.p3} poster</td></tr>
-        <tr><td>Program 4</td><td>${postCounts.p4} poster</td></tr>
+        <tr><td>Total posts</td><td>${postCounts.total}</td></tr>
+        <tr><td>Programme 1</td><td>${postCounts.p1} posts</td></tr>
+        <tr><td>Programme 2</td><td>${postCounts.p2} posts</td></tr>
+        <tr><td>Programme 3</td><td>${postCounts.p3} posts</td></tr>
+        <tr><td>Programme 4</td><td>${postCounts.p4} posts</td></tr>
       </table>
     </div>
 
     <div class="buttons">
-      <button class="secondary" onclick="google.script.host.close()">Stäng</button>
+      <button class="secondary" onclick="google.script.host.close()">Close</button>
       <button class="primary" onclick="google.script.run.showSyncConfigDialog(); google.script.host.close();">
-        Konfigurera
+        Configure
       </button>
     </div>
-  `)
-  .setWidth(500)
-  .setHeight(550);
+  `,
+  )
+    .setWidth(500)
+    .setHeight(550)
 
-  SpreadsheetApp.getUi().showModalDialog(html, 'Sync-status');
+  SpreadsheetApp.getUi().showModalDialog(html, 'Sync Status')
 }
 
 // ============================================================================
@@ -864,26 +875,32 @@ function showSyncStatusDialog() {
  * Show external API dialog with keys and endpoints
  */
 function showExternalApiDialog() {
-  const props = PropertiesService.getScriptProperties();
-  const apiSecret = props.getProperty('API_SECRET') || '';
-  const hasApiSecret = apiSecret.length > 0;
+  const props = PropertiesService.getScriptProperties()
+  const apiSecret = props.getProperty('API_SECRET') || ''
+  const hasApiSecret = apiSecret.length > 0
 
   // Get the web app URL
-  const scriptId = ScriptApp.getScriptId();
-  const webAppUrl = `https://script.google.com/macros/s/${scriptId}/exec`;
+  const scriptId = ScriptApp.getScriptId()
+  const webAppUrl = `https://script.google.com/macros/s/${scriptId}/exec`
 
   // Get client keys
-  const clientKeys = JSON.parse(props.getProperty('CLIENT_API_KEYS') || '{}');
-  const clientList = Object.entries(clientKeys).map(([name, key]) =>
-    `<tr>
+  const clientKeys = JSON.parse(props.getProperty('CLIENT_API_KEYS') || '{}')
+  const clientList =
+    Object.entries(clientKeys)
+      .map(
+        ([name, key]) =>
+          `<tr>
       <td>${name}</td>
       <td><code>${key.substring(0, 8)}...</code></td>
-      <td>${clientKeys[name + '_created'] || 'Okänt'}</td>
-      <td><button onclick="revokeKey('${name}')">Återkalla</button></td>
-    </tr>`
-  ).join('') || '<tr><td colspan="4" style="color:#666; text-align:center;">Inga klient-nycklar genererade</td></tr>';
+      <td>${clientKeys[name + '_created'] || 'Unknown'}</td>
+      <td><button onclick="revokeKey('${name}')">Revoke</button></td>
+    </tr>`,
+      )
+      .join('') ||
+    '<tr><td colspan="4" style="color:#666; text-align:center;">No client keys generated</td></tr>'
 
-  const html = HtmlService.createHtmlOutput(`
+  const html = HtmlService.createHtmlOutput(
+    `
     <style>
       body { font-family: 'Google Sans', Arial, sans-serif; padding: 20px; }
       h2 { color: #1a73e8; margin-bottom: 8px; }
@@ -908,44 +925,48 @@ function showExternalApiDialog() {
       .warning { background: #fef7e0; border: 1px solid #f9ab00; padding: 12px; border-radius: 8px; margin-bottom: 16px; }
     </style>
 
-    <h2>Externa API-anslutningar</h2>
-    <p class="subtitle">Hantera API-nycklar för Companion, vMix och andra externa system</p>
+    <h2>External API Connections</h2>
+    <p class="subtitle">Manage API keys for Companion, vMix and other external systems</p>
 
     <div class="status">
       <span class="status-dot ${hasApiSecret ? 'ok' : 'warn'}"></span>
-      <span>API-autentisering: ${hasApiSecret ? 'Aktiverad' : 'Ej konfigurerad'}</span>
+      <span>API authentication: ${hasApiSecret ? 'Enabled' : 'Not configured'}</span>
     </div>
 
-    ${!hasApiSecret ? `
+    ${
+      !hasApiSecret
+        ? `
     <div class="warning">
-      <strong>⚠️ Varning:</strong> Ingen API-nyckel är satt. API:et är öppet för alla.
-      <br>Klicka "Generera master-nyckel" nedan för att aktivera autentisering.
+      <strong>⚠️ Warning:</strong> No API key is set. The API is open to everyone.
+      <br>Click "Generate master key" below to enable authentication.
     </div>
-    ` : ''}
+    `
+        : ''
+    }
 
     <div class="section">
       <h3>API Endpoint</h3>
       <div class="endpoint-box">
-        <label>Web App URL (för Companion/vMix)</label>
+        <label>Web App URL (for Companion/vMix)</label>
         <code id="webAppUrl">${webAppUrl}</code>
-        <button class="copy-btn" onclick="copyToClipboard('webAppUrl')">Kopiera</button>
+        <button class="copy-btn" onclick="copyToClipboard('webAppUrl')">Copy</button>
       </div>
     </div>
 
     <div class="section">
-      <h3>Master API-nyckel</h3>
+      <h3>Master API Key</h3>
       <div class="endpoint-box">
-        <label>API Secret (för Script Properties)</label>
-        <code id="apiSecret">${hasApiSecret ? apiSecret : '(ej satt)'}</code>
-        ${hasApiSecret ? '<button class="copy-btn" onclick="copyToClipboard(\'apiSecret\')">Kopiera</button>' : ''}
+        <label>API Secret (for Script Properties)</label>
+        <code id="apiSecret">${hasApiSecret ? apiSecret : '(not set)'}</code>
+        ${hasApiSecret ? '<button class="copy-btn" onclick="copyToClipboard(\'apiSecret\')">Copy</button>' : ''}
       </div>
     </div>
 
     <div class="section">
-      <h3>Klient-nycklar</h3>
+      <h3>Client Keys</h3>
       <table>
         <thead>
-          <tr><th>Namn</th><th>Nyckel</th><th>Skapad</th><th></th></tr>
+          <tr><th>Name</th><th>Key</th><th>Created</th><th></th></tr>
         </thead>
         <tbody>
           ${clientList}
@@ -954,109 +975,111 @@ function showExternalApiDialog() {
     </div>
 
     <div class="actions">
-      <button class="secondary" onclick="google.script.host.close()">Stäng</button>
+      <button class="secondary" onclick="google.script.host.close()">Close</button>
       <button class="primary" onclick="generateMasterKey()">
-        ${hasApiSecret ? 'Regenerera master-nyckel' : 'Generera master-nyckel'}
+        ${hasApiSecret ? 'Regenerate master key' : 'Generate master key'}
       </button>
-      <button class="primary" onclick="addClientKey()">Lägg till klient</button>
+      <button class="primary" onclick="addClientKey()">Add client</button>
     </div>
 
     <script>
       function copyToClipboard(elementId) {
         const text = document.getElementById(elementId).innerText;
         navigator.clipboard.writeText(text).then(() => {
-          alert('Kopierat till urklipp!');
+          alert('Copied to clipboard!');
         });
       }
 
       function generateMasterKey() {
-        if (confirm('Detta kommer generera en ny master API-nyckel. Alla befintliga integrationer måste uppdateras. Fortsätt?')) {
+        if (confirm('This will generate a new master API key. All existing integrations must be updated. Continue?')) {
           google.script.run
             .withSuccessHandler(() => {
-              alert('Ny master-nyckel genererad!');
+              alert('New master key generated!');
               google.script.host.close();
             })
-            .withFailureHandler(err => alert('Fel: ' + err))
+            .withFailureHandler(err => alert('Error: ' + err))
             .generateNewApiKey();
         }
       }
 
       function addClientKey() {
-        const name = prompt('Ange namn för klienten (t.ex. "Companion Studio A"):');
+        const name = prompt('Enter name for the client (e.g. "Companion Studio A"):');
         if (name) {
           google.script.run
             .withSuccessHandler(key => {
-              alert('Klient-nyckel skapad!\\n\\nNyckel: ' + key + '\\n\\nSpara denna nyckel säkert.');
+              alert('Client key created!\\n\\nKey: ' + key + '\\n\\nStore this key securely.');
               google.script.host.close();
             })
-            .withFailureHandler(err => alert('Fel: ' + err))
+            .withFailureHandler(err => alert('Error: ' + err))
             .generateClientApiKey(name);
         }
       }
 
       function revokeKey(name) {
-        if (confirm('Återkalla nyckel för "' + name + '"? Klienten kommer inte längre kunna ansluta.')) {
+        if (confirm('Revoke key for "' + name + '"? The client will no longer be able to connect.')) {
           google.script.run
             .withSuccessHandler(() => {
-              alert('Nyckel återkallad');
+              alert('Key revoked');
               google.script.host.close();
             })
-            .withFailureHandler(err => alert('Fel: ' + err))
+            .withFailureHandler(err => alert('Error: ' + err))
             .revokeClientApiKey(name);
         }
       }
     </script>
-  `)
-  .setWidth(600)
-  .setHeight(650);
+  `,
+  )
+    .setWidth(600)
+    .setHeight(650)
 
-  SpreadsheetApp.getUi().showModalDialog(html, 'API-hantering');
+  SpreadsheetApp.getUi().showModalDialog(html, 'API Management')
 }
 
 /**
  * Generate new master API key
  */
 function generateNewApiKey() {
-  const key = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '').substring(0, 16);
-  const props = PropertiesService.getScriptProperties();
-  props.setProperty('API_SECRET', key);
+  const key =
+    Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '').substring(0, 16)
+  const props = PropertiesService.getScriptProperties()
+  props.setProperty('API_SECRET', key)
 
-  Logger.log('New API secret generated');
-  SpreadsheetApp.getActiveSpreadsheet().toast('Ny API-nyckel genererad', 'API', 3);
+  Logger.log('New API secret generated')
+  SpreadsheetApp.getActiveSpreadsheet().toast('New API key generated', 'API', 3)
 
-  return key;
+  return key
 }
 
 /**
  * Generate client-specific API key
  */
 function generateClientApiKey(clientName) {
-  const props = PropertiesService.getScriptProperties();
-  const clientKeys = JSON.parse(props.getProperty('CLIENT_API_KEYS') || '{}');
+  const props = PropertiesService.getScriptProperties()
+  const clientKeys = JSON.parse(props.getProperty('CLIENT_API_KEYS') || '{}')
 
-  const key = 'client_' + Utilities.getUuid().replace(/-/g, '');
-  clientKeys[clientName] = key;
-  clientKeys[clientName + '_created'] = new Date().toISOString().split('T')[0];
+  const key = 'client_' + Utilities.getUuid().replace(/-/g, '')
+  clientKeys[clientName] = key
+  clientKeys[clientName + '_created'] = new Date().toISOString().split('T')[0]
 
-  props.setProperty('CLIENT_API_KEYS', JSON.stringify(clientKeys));
+  props.setProperty('CLIENT_API_KEYS', JSON.stringify(clientKeys))
 
-  Logger.log(`Client API key generated for: ${clientName}`);
-  return key;
+  Logger.log(`Client API key generated for: ${clientName}`)
+  return key
 }
 
 /**
  * Revoke client API key
  */
 function revokeClientApiKey(clientName) {
-  const props = PropertiesService.getScriptProperties();
-  const clientKeys = JSON.parse(props.getProperty('CLIENT_API_KEYS') || '{}');
+  const props = PropertiesService.getScriptProperties()
+  const clientKeys = JSON.parse(props.getProperty('CLIENT_API_KEYS') || '{}')
 
-  delete clientKeys[clientName];
-  delete clientKeys[clientName + '_created'];
+  delete clientKeys[clientName]
+  delete clientKeys[clientName + '_created']
 
-  props.setProperty('CLIENT_API_KEYS', JSON.stringify(clientKeys));
+  props.setProperty('CLIENT_API_KEYS', JSON.stringify(clientKeys))
 
-  Logger.log(`Client API key revoked for: ${clientName}`);
+  Logger.log(`Client API key revoked for: ${clientName}`)
 }
 
 /**
@@ -1064,35 +1087,35 @@ function revokeClientApiKey(clientName) {
  */
 function pullAllFromSupabase() {
   if (!isSyncEnabled_()) {
-    SpreadsheetApp.getUi().alert('Sync är inte aktiverat. Konfigurera först.');
-    return;
+    SpreadsheetApp.getUi().alert('Sync is not enabled. Configure first.')
+    return
   }
 
-  const ui = SpreadsheetApp.getUi();
+  const ui = SpreadsheetApp.getUi()
   const confirm = ui.alert(
-    'Hämta från Supabase',
-    'Detta kommer hämta alla poster från Supabase och skriva över lokala ändringar. Fortsätt?',
-    ui.ButtonSet.YES_NO
-  );
+    'Pull from Supabase',
+    'This will fetch all posts from Supabase and overwrite local changes. Continue?',
+    ui.ButtonSet.YES_NO,
+  )
 
-  if (confirm !== ui.Button.YES) return;
+  if (confirm !== ui.Button.YES) return
 
   try {
-    const response = sendToWorker_('/api/posts', {});
+    const response = sendToWorker_('/api/posts', {})
 
     if (response.success && response.posts) {
-      let updated = 0;
+      let updated = 0
       for (const post of response.posts) {
-        handleInboundUpdate_(post);
-        updated++;
+        handleInboundUpdate_(post)
+        updated++
       }
 
-      ui.alert(`Hämtning klar!\n\nUppdaterade ${updated} poster från Supabase.`);
+      ui.alert(`Pull complete!\n\nUpdated ${updated} posts from Supabase.`)
     } else {
-      ui.alert('Kunde inte hämta data: ' + (response.error || 'Okänt fel'));
+      ui.alert('Could not fetch data: ' + (response.error || 'Unknown error'))
     }
   } catch (error) {
-    ui.alert('Fel vid hämtning: ' + error.message);
+    ui.alert('Error fetching: ' + error.message)
   }
 }
 
@@ -1100,15 +1123,17 @@ function pullAllFromSupabase() {
  * Test API connection (menu wrapper)
  */
 function testApiConnection() {
-  const props = PropertiesService.getScriptProperties();
-  const workerUrl = props.getProperty(SYNC_CONFIG.WORKER_URL_KEY);
-  const secret = props.getProperty(SYNC_CONFIG.WEBHOOK_SECRET_KEY);
+  const props = PropertiesService.getScriptProperties()
+  const workerUrl = props.getProperty(SYNC_CONFIG.WORKER_URL_KEY)
+  const secret = props.getProperty(SYNC_CONFIG.WEBHOOK_SECRET_KEY)
 
   if (!workerUrl) {
-    SpreadsheetApp.getUi().alert('Worker URL är inte konfigurerad.\n\nGå till Integration > Konfigurera Supabase sync');
-    return;
+    SpreadsheetApp.getUi().alert(
+      'Worker URL is not configured.\n\nGo to Integration > Configure Supabase sync',
+    )
+    return
   }
 
-  const result = testSyncConnection(workerUrl, secret);
-  SpreadsheetApp.getUi().alert('API-test\n\n' + result);
+  const result = testSyncConnection(workerUrl, secret)
+  SpreadsheetApp.getUi().alert('API Test\n\n' + result)
 }

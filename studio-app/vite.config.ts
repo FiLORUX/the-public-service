@@ -1,6 +1,6 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import { VitePWA } from 'vite-plugin-pwa';
+import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite'
+import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   plugins: [
@@ -20,29 +20,29 @@ export default defineConfig({
           {
             src: 'pwa-192x192.png',
             sizes: '192x192',
-            type: 'image/png'
+            type: 'image/png',
           },
           {
             src: 'pwa-512x512.png',
             sizes: '512x512',
-            type: 'image/png'
-          }
-        ]
+            type: 'image/png',
+          },
+        ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
-      }
-    })
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+      },
+    }),
   ],
   server: {
     host: true,
-    // Port 7700: En blinkning till Matteus 18:21–22 där Petrus frågar Jesus
-    // "Hur många gånger ska jag förlåta?" och Jesus svarar "sjuttio gånger sju"
-    // (77 × 100 = 7700) - passande för ett gudstjänstsystem
-    port: 7700
+    // Port 7700: A nod to Matthew 18:21-22 where Peter asks Jesus
+    // "How many times shall I forgive?" and Jesus answers "seventy times seven"
+    // (77 x 100 = 7700) - fitting for a church service system
+    port: 7700,
   },
   build: {
     outDir: 'dist',
-    sourcemap: true
-  }
-});
+    sourcemap: true,
+  },
+})

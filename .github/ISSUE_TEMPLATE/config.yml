@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+
+contact_links:
+  - name: Documentation
+    url: https://github.com/thasted/the-public-service#readme
+    about: Check the documentation for usage guides and troubleshooting information.
+
+  - name: Discussions
+    url: https://github.com/thasted/the-public-service/discussions
+    about: Ask questions, share ideas, or discuss the project with the community.
+
+  - name: Security Vulnerability
+    url: https://github.com/thasted/the-public-service/security/advisories/new
+    about: Report security vulnerabilities privately. Do not create public issues for security concerns.

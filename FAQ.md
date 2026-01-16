@@ -21,6 +21,7 @@ Whilst it runs inside Google Sheets, the underlying architecture is database-dri
 ### Why Google Sheets and not a proper database?
 
 Pragmatic choice. Google Sheets provides:
+
 - Zero infrastructure cost
 - Familiar interface for non-technical users
 - Built-in collaboration and sharing
@@ -40,6 +41,7 @@ The system will continue to function, but you bypass validation logic. Use the p
 ### How do I back up my data?
 
 Three options:
+
 1. **Manual:** System > Backup to JSON
 2. **Automatic:** Enable scheduled backups via System > Backup & Restore > Enable Automatic Backup
 3. **Google native:** File > Version history (built into Sheets)
@@ -68,6 +70,7 @@ Yes. Use vMix's scripting capabilities to call the HTTP API. The system can rece
 ### Can I integrate with other systems?
 
 Any system that can make HTTP requests can integrate via the REST API. Common integrations include:
+
 - Deck control (HyperDeck, Ki Pro)
 - Video mixers (ATEM, Tricaster)
 - Graphics systems (CasparCG, Viz)
@@ -92,6 +95,7 @@ Contributors (people who appear on camera) are stored in a central registry. Whe
 ### Can I import data from Excel?
 
 Not directly. However, you can:
+
 1. Export your Excel data to CSV
 2. Use Posts > Import (CSV/TSV) to bring it in
 3. Manually copy-paste into the database sheets (advanced)
@@ -130,6 +134,7 @@ Check the Recycle Bin: Posts > Recycle Bin > View Deleted Posts. Soft-deleted it
 ### How should I structure recording days?
 
 A typical three-day structure:
+
 - **Day 1:** Static elements (sermons, readings, interviews)
 - **Day 2:** Music elements (choir, solos, organ)
 - **Day 3:** Congregation elements (full run-through with audience)
@@ -156,6 +161,7 @@ Edit directly in the Programme view. Changes propagate immediately to the databa
 ### What is the 2026 architecture?
 
 An optional hybrid setup that adds:
+
 - **Supabase:** PostgreSQL database with ACID guarantees
 - **Cloudflare Worker:** Synchronisation and conflict resolution
 - **iPad PWA:** Touch-optimised studio view
@@ -165,6 +171,7 @@ This provides better performance, offline support and real-time collaboration wh
 ### Do I need the 2026 architecture?
 
 No. The base system (Sheets-only) is fully functional. The 2026 architecture is for teams that need:
+
 - Real-time multi-device updates
 - Offline iPad operation
 - Audit logging with database guarantees

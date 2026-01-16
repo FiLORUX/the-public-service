@@ -1,0 +1,152 @@
+name: Bug Report
+description: Report a bug or unexpected behaviour in The Public Service
+title: '[Bug]: '
+labels: ['bug', 'triage']
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Bug Report
+
+        Thank you for taking the time to report this issue. Please provide as much detail as possible to help us investigate and resolve the problem efficiently.
+
+        **Before submitting**, please ensure:
+        - You have searched existing issues to avoid duplicates
+        - You are using the latest version of the affected component
+        - You have reviewed the relevant documentation
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected Component
+      description: Which part of the system is affected?
+      options:
+        - Apps Script (Google Workspace integration)
+        - Worker (Cloudflare Worker API)
+        - Studio PWA (Frontend application)
+        - Database (D1/KV storage layer)
+        - Documentation
+        - CI/CD Pipeline
+        - Other (please specify in description)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: How severely does this bug affect your workflow?
+      options:
+        - Critical - System unusable, data loss, or security vulnerability
+        - High - Major functionality broken, no workaround available
+        - Medium - Feature impaired but workaround exists
+        - Low - Minor inconvenience, cosmetic issue
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: |
+        Please provide details about your environment. Include all relevant information.
+      placeholder: |
+        - Browser: Chrome 120.0.6099.109
+        - Operating System: macOS Sonoma 14.2
+        - Worker Environment: Production / Staging / Local
+        - Apps Script Deployment ID: (if applicable)
+        - Relevant API versions: (if applicable)
+      value: |
+        - Browser:
+        - Operating System:
+        - Environment: Production / Staging / Local
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of the bug.
+      placeholder: Describe what happened and what you expected to happen instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: |
+        Provide detailed steps to reproduce the behaviour. Be as specific as possible.
+      placeholder: |
+        1. Navigate to '...'
+        2. Click on '...'
+        3. Enter '...' in the field
+        4. Observe the error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behaviour
+      description: What did you expect to happen?
+      placeholder: Describe the expected outcome.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behaviour
+      description: What actually happened?
+      placeholder: Describe what occurred instead of the expected behaviour.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Logs or Error Messages
+      description: |
+        If applicable, include any error messages, console output, or log entries.
+        This will be automatically formatted as code.
+      render: shell
+      placeholder: |
+        Paste any relevant error messages, stack traces, or log output here.
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or Recordings
+      description: |
+        If applicable, add screenshots or screen recordings to help explain the problem.
+        Drag and drop images here or paste from clipboard.
+      placeholder: Drag and drop images here, or paste image URLs.
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: |
+        Add any other context about the problem here. This might include:
+        - Recent changes to your setup
+        - Whether this worked previously
+        - Any workarounds you've discovered
+        - Related issues or discussions
+      placeholder: Any additional information that might be helpful.
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Submission Checklist
+      description: Please confirm the following before submitting.
+      options:
+        - label: I have searched existing issues and this is not a duplicate
+          required: true
+        - label: I have provided all requested information to the best of my ability
+          required: true
+        - label: I am using the latest available version of the affected component
+          required: false

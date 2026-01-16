@@ -34,6 +34,7 @@ curl "https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec?action=status"
 ```
 
 Expected response:
+
 ```json
 {
   "success": true,
@@ -57,14 +58,14 @@ All GET requests use query parameters.
 
 **Authentication:** Add `api_key=YOUR_SECRET` to query params (except for `status`).
 
-| Action | Description | Parameters | Auth Required |
-|--------|-------------|------------|---------------|
-| `status` | System status and available endpoints | - | No |
-| `posts` | Get all posts for a program | `program` (1-4) | Yes |
-| `schedule` | Get recording schedule | `day` (day1/day2/day3, optional) | Yes |
-| `post` | Get specific post | `post_id` | Yes |
-| `current` | Get currently recording post | - | Yes |
-| `clip_counter` | Get next clip number | - | Yes |
+| Action         | Description                           | Parameters                       | Auth Required |
+| -------------- | ------------------------------------- | -------------------------------- | ------------- |
+| `status`       | System status and available endpoints | -                                | No            |
+| `posts`        | Get all posts for a program           | `program` (1-4)                  | Yes           |
+| `schedule`     | Get recording schedule                | `day` (day1/day2/day3, optional) | Yes           |
+| `post`         | Get specific post                     | `post_id`                        | Yes           |
+| `current`      | Get currently recording post          | -                                | Yes           |
+| `clip_counter` | Get next clip number                  | -                                | Yes           |
 
 **Examples:**
 
@@ -91,18 +92,18 @@ All POST requests use JSON body with `action` field.
 
 **Authentication:** Include `api_key` in the JSON body.
 
-| Action | Description | Required Fields |
-|--------|-------------|-----------------|
-| `tc_in` | Log timecode IN | `post_id`, `tc_in` (optional) |
-| `tc_out` | Log timecode OUT | `post_id`, `tc_out` (optional) |
-| `set_recording` | Set post as recording | `post_id` |
-| `mark_recorded` | Mark post as recorded | `post_id` |
-| `mark_approved` | Mark post as approved | `post_id` |
-| `status_update` | Update post status | `post_id`, `status` |
-| `get_posts` | Get posts for program | `program_nr` |
-| `get_next` | Get next post to record | `program_nr`, `recording_day` (optional) |
-| `get_schedule` | Get full schedule | `recording_day` (optional) |
-| `increment_clip` | Increment clip counter | - |
+| Action           | Description             | Required Fields                          |
+| ---------------- | ----------------------- | ---------------------------------------- |
+| `tc_in`          | Log timecode IN         | `post_id`, `tc_in` (optional)            |
+| `tc_out`         | Log timecode OUT        | `post_id`, `tc_out` (optional)           |
+| `set_recording`  | Set post as recording   | `post_id`                                |
+| `mark_recorded`  | Mark post as recorded   | `post_id`                                |
+| `mark_approved`  | Mark post as approved   | `post_id`                                |
+| `status_update`  | Update post status      | `post_id`, `status`                      |
+| `get_posts`      | Get posts for program   | `program_nr`                             |
+| `get_next`       | Get next post to record | `program_nr`, `recording_day` (optional) |
+| `get_schedule`   | Get full schedule       | `recording_day` (optional)               |
+| `increment_clip` | Increment clip counter  | -                                        |
 
 **Examples:**
 
@@ -137,6 +138,7 @@ curl -X POST "https://YOUR_URL/exec" \
 #### Button: "TC IN" (Start recording)
 
 **Action: HTTP POST Request**
+
 ```
 URL: https://script.google.com/macros/s/YOUR_ID/exec
 Method: POST
@@ -154,6 +156,7 @@ Body:
 #### Button: "TC OUT" (Stop recording)
 
 **Action: HTTP POST Request**
+
 ```
 URL: https://script.google.com/macros/s/YOUR_ID/exec
 Method: POST
@@ -201,6 +204,7 @@ Body:
 ### Companion Variables
 
 Set up custom variables in Companion:
+
 - `current_post`: Currently selected post ID (e.g., "P1:5")
 - `current_program`: Current program number (1-4)
 - `recording_day`: Current recording day (day1/day2/day3)
@@ -233,10 +237,12 @@ API.HTTPPost(url, jsonOut, "application/json")
 ### With Companion
 
 Use Companion's HyperDeck module to:
+
 1. Get current timecode from HyperDeck
 2. Send to Google Sheets API via HTTP module
 
 **Trigger on Record Start:**
+
 ```json
 {
   "action": "tc_in",
@@ -247,6 +253,7 @@ Use Companion's HyperDeck module to:
 ```
 
 **Trigger on Record Stop:**
+
 ```json
 {
   "action": "tc_out",
@@ -263,6 +270,7 @@ Use Companion's HyperDeck module to:
 All responses are JSON with this structure:
 
 ### Success Response
+
 ```json
 {
   "success": true,
@@ -274,6 +282,7 @@ All responses are JSON with this structure:
 ```
 
 ### Error Response
+
 ```json
 {
   "success": false,
@@ -286,12 +295,12 @@ All responses are JSON with this structure:
 
 ## Status Values
 
-| Key | Display Name | Colour | Description |
-|-----|--------------|--------|-------------|
-| `scheduled` | Scheduled | White | Not yet recorded |
-| `recording` | Recording | Yellow | Currently recording |
-| `recorded` | Recorded | Light Green | Recorded, needs approval |
-| `approved` | Approved | Dark Green | Approved and done |
+| Key         | Display Name | Colour      | Description              |
+| ----------- | ------------ | ----------- | ------------------------ |
+| `scheduled` | Scheduled    | White       | Not yet recorded         |
+| `recording` | Recording    | Yellow      | Currently recording      |
+| `recorded`  | Recorded     | Light Green | Recorded, needs approval |
+| `approved`  | Approved     | Dark Green  | Approved and done        |
 
 ---
 
@@ -322,28 +331,33 @@ All responses are JSON with this structure:
 ### Typical Recording Session
 
 1. **Before session:** Get schedule
+
    ```bash
    curl "https://URL/exec?action=schedule&day=day1"
    ```
 
 2. **Select first post:** Get next
+
    ```json
-   {"action": "get_next", "recording_day": "day1"}
+   { "action": "get_next", "recording_day": "day1" }
    ```
 
 3. **Start recording:** TC-IN
+
    ```json
-   {"action": "tc_in", "post_id": "P1:1", "tc_in": "01:00:00:00"}
+   { "action": "tc_in", "post_id": "P1:1", "tc_in": "01:00:00:00" }
    ```
 
 4. **Stop recording:** TC-OUT
+
    ```json
-   {"action": "tc_out", "post_id": "P1:1", "tc_out": "01:07:30:00"}
+   { "action": "tc_out", "post_id": "P1:1", "tc_out": "01:07:30:00" }
    ```
 
 5. **Review and approve:**
+
    ```json
-   {"action": "mark_approved", "post_id": "P1:1"}
+   { "action": "mark_approved", "post_id": "P1:1" }
    ```
 
 6. **Repeat** for next post
@@ -355,6 +369,7 @@ All responses are JSON with this structure:
 ### API Rate Limiting (Built-in)
 
 The API has built-in rate limiting:
+
 - **60 requests per minute** per client
 - Identified by `client_id` parameter (optional)
 - Returns `429 Too Many Requests` equivalent when exceeded
@@ -370,6 +385,7 @@ The API has built-in rate limiting:
 ### Google Apps Script Limits
 
 Google Apps Script has execution limits:
+
 - **Trigger executions:** 90 min/day (consumer), 6 hr/day (Workspace)
 - **URL Fetch calls:** 20,000/day
 - **Script runtime:** 6 minutes max per execution
@@ -381,28 +397,36 @@ For high-volume use, consider batching requests or using Google Cloud Functions.
 ## Troubleshooting
 
 ### "API key required" error
+
 You need to include your API key in requests. Either:
+
 - Add `api_key=YOUR_SECRET` to query parameters (GET)
 - Add `"api_key": "YOUR_SECRET"` to JSON body (POST)
 
 If you haven't set up API_SECRET, the API will be unprotected (not recommended for production).
 
 ### "Invalid API key" error
+
 The provided API key doesn't match the one configured in Script Properties. Double-check your API_SECRET value.
 
 ### "Rate limit exceeded" error
+
 You've exceeded 60 requests per minute. Wait 60 seconds and try again. For high-frequency use, batch requests or use `client_id` parameter to identify different clients.
 
 ### "API not enabled" error
+
 The old API_CONFIG.ENABLED check has been removed. If you see this, you may have an old version of the code.
 
 ### CORS errors
+
 Deploy the web app with "Anyone" access. Google Apps Script handles CORS automatically.
 
 ### Timeout errors
+
 Google Apps Script has a 30-second timeout for web requests. Keep payloads small.
 
 ### Post not found
+
 Ensure post_id format is correct: `P{program}:{number}` (e.g., "P1:5", "P2:10")
 
 ---

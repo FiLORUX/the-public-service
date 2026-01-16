@@ -1,0 +1,32 @@
+{
+  "name": "the-public-service",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Monorepo for church service management - Cloudflare Worker, React PWA, and Google Apps Script",
+  "type": "module",
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "npm run typecheck:worker && npm run typecheck:studio",
+    "typecheck:worker": "cd worker && npx tsc --noEmit",
+    "typecheck:studio": "cd studio-app && npx tsc --noEmit",
+    "check": "npm run lint && npm run format:check && npm run typecheck"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "eslint": "^9.18.0",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "eslint-plugin-react-refresh": "^0.4.16",
+    "globals": "^15.14.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.20.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "npm@10.8.0"
+}

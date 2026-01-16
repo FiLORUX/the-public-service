@@ -1,0 +1,28 @@
+# Build outputs
+dist/
+build/
+.wrangler/
+
+# Dependencies
+node_modules/
+
+# Cache
+.cache/
+.turbo/
+*.tsbuildinfo
+
+# IDE
+.idea/
+.vscode/
+
+# Logs
+*.log
+
+# Lock files (prefer not to format)
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Generated
+*.min.js
+*.min.css

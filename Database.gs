@@ -1,9 +1,9 @@
 /**
  * DATABASE LAYER
- * 
+ *
  * All database operations go through this layer.
  * This ensures data integrity and provides a clean API for views.
- * 
+ *
  * Philosophy:
  * - Database sheets are the single source of truth
  * - All writes happen here (views are read-only)
@@ -20,55 +20,54 @@
  * This is the ONE function to run when setting up a new spreadsheet
  */
 function bootstrapDatabase() {
-  const ui = SpreadsheetApp.getUi();
-  
+  const ui = SpreadsheetApp.getUi()
+
   const response = ui.alert(
     'Bootstrap Database',
     'This will create/reset the database structure. Existing data in database sheets will be CLEARED. Continue?',
-    ui.ButtonSet.YES_NO
-  );
-  
+    ui.ButtonSet.YES_NO,
+  )
+
   if (response !== ui.Button.YES) {
-    ui.alert('Bootstrap cancelled');
-    return;
+    ui.alert('Bootstrap cancelled')
+    return
   }
-  
+
   try {
     // Create database sheets
-    createDbPostsSheet_();
-    createDbPeopleSheet_();
-    createDbProgramsSheet_();
-    createDbPostTypesSheet_();
-    createDbLogSheet_();
-    createDbSettingsSheet_();
-    createDbAuditSheet_();
+    createDbPostsSheet_()
+    createDbPeopleSheet_()
+    createDbProgramsSheet_()
+    createDbPostTypesSheet_()
+    createDbLogSheet_()
+    createDbSettingsSheet_()
+    createDbAuditSheet_()
 
     // Seed initial data
-    seedPostTypes_();
-    seedPrograms_();
+    seedPostTypes_()
+    seedPrograms_()
 
     // Log bootstrap to audit
     logAudit_({
       action: 'bootstrap',
       entity_type: 'system',
-      source: 'ui'
-    });
-    
+      source: 'ui',
+    })
+
     // Hide database sheets
-    hideDbSheets_();
-    
+    hideDbSheets_()
+
     // Create custom menu
-    onOpen();
-    
+    onOpen()
+
     ui.alert(
       'Success!',
-      'Database initialised successfully.\\n\\nNext steps:\\n1. Edit programme metadata in _DB_Program\\n2. Add people to _DB_Personer\\n3. Start creating posts via Programme views',
-      ui.ButtonSet.OK
-    );
-    
+      'Database initialised successfully.\\n\\nNext steps:\\n1. Edit programme metadata in _DB_Program\\n2. Add people to _DB_People\\n3. Start creating posts via Programme views',
+      ui.ButtonSet.OK,
+    )
   } catch (error) {
-    ui.alert('Error', `Bootstrap failed: ${error.message}`, ui.ButtonSet.OK);
-    Logger.log(`Bootstrap error: ${error.stack}`);
+    ui.alert('Error', `Bootstrap failed: ${error.message}`, ui.ButtonSet.OK)
+    Logger.log(`Bootstrap error: ${error.stack}`)
   }
 }
 
@@ -80,260 +79,271 @@ function bootstrapDatabase() {
  * Create _DB_Posts sheet (master post registry)
  */
 function createDbPostsSheet_() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName(DB.POSTS);
-  
+  const ss = SpreadsheetApp.getActiveSpreadsheet()
+  let sheet = ss.getSheetByName(DB.POSTS)
+
   if (sheet) {
     // Clear existing data
-    sheet.clear();
+    sheet.clear()
   } else {
-    sheet = ss.insertSheet(DB.POSTS);
+    sheet = ss.insertSheet(DB.POSTS)
   }
-  
+
   // Set headers
-  const headerRange = sheet.getRange(1, 1, 1, POST_HEADERS.length);
-  headerRange.setValues([POST_HEADERS]);
-  headerRange.setBackground(COLOURS.HEADER_BG);
-  headerRange.setFontColor(COLOURS.HEADER_TEXT);
-  headerRange.setFontWeight('bold');
-  
+  const headerRange = sheet.getRange(1, 1, 1, POST_HEADERS.length)
+  headerRange.setValues([POST_HEADERS])
+  headerRange.setBackground(COLOURS.HEADER_BG)
+  headerRange.setFontColor(COLOURS.HEADER_TEXT)
+  headerRange.setFontWeight('bold')
+
   // Freeze header row
-  sheet.setFrozenRows(1);
-  
+  sheet.setFrozenRows(1)
+
   // Set column widths
-  const widths = [80, 60, 80, 100, 250, 80, 150, 120, 120, 120, 200, 100, 100, 100, 150, 150, 150, 80, 150, 150];
+  const widths = [
+    80, 60, 80, 100, 250, 80, 150, 120, 120, 120, 200, 100, 100, 100, 150, 150, 150, 80, 150, 150,
+  ]
   widths.forEach((width, index) => {
-    sheet.setColumnWidth(index + 1, width);
-  });
-  
+    sheet.setColumnWidth(index + 1, width)
+  })
+
   // Protect sheet (users should edit via views, not directly)
-  const protection = sheet.protect().setDescription('Database sheet - edit via Programme views');
-  protection.setWarningOnly(true);
-  
-  Logger.log('Created _DB_Posts sheet');
+  const protection = sheet.protect().setDescription('Database sheet - edit via Programme views')
+  protection.setWarningOnly(true)
+
+  Logger.log('Created _DB_Posts sheet')
 }
 
 /**
  * Create _DB_Personer sheet (people registry)
  */
 function createDbPeopleSheet_() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName(DB.PEOPLE);
-  
+  const ss = SpreadsheetApp.getActiveSpreadsheet()
+  let sheet = ss.getSheetByName(DB.PEOPLE)
+
   if (sheet) {
-    sheet.clear();
+    sheet.clear()
   } else {
-    sheet = ss.insertSheet(DB.PEOPLE);
+    sheet = ss.insertSheet(DB.PEOPLE)
   }
-  
+
   // Set headers
-  const headerRange = sheet.getRange(1, 1, 1, PERSON_HEADERS.length);
-  headerRange.setValues([PERSON_HEADERS]);
-  headerRange.setBackground(COLOURS.HEADER_BG);
-  headerRange.setFontColor(COLOURS.HEADER_TEXT);
-  headerRange.setFontWeight('bold');
-  
-  sheet.setFrozenRows(1);
-  
+  const headerRange = sheet.getRange(1, 1, 1, PERSON_HEADERS.length)
+  headerRange.setValues([PERSON_HEADERS])
+  headerRange.setBackground(COLOURS.HEADER_BG)
+  headerRange.setFontColor(COLOURS.HEADER_TEXT)
+  headerRange.setFontWeight('bold')
+
+  sheet.setFrozenRows(1)
+
   // Set column widths
-  sheet.setColumnWidth(1, 100);  // person_id
-  sheet.setColumnWidth(2, 200);  // name
-  sheet.setColumnWidth(3, 200);  // roles
-  sheet.setColumnWidth(4, 200);  // contact
-  sheet.setColumnWidth(5, 120);  // type
-  sheet.setColumnWidth(6, 150);  // created
-  
-  Logger.log('Created _DB_Personer sheet');
+  sheet.setColumnWidth(1, 100) // person_id
+  sheet.setColumnWidth(2, 200) // name
+  sheet.setColumnWidth(3, 200) // roles
+  sheet.setColumnWidth(4, 200) // contact
+  sheet.setColumnWidth(5, 120) // type
+  sheet.setColumnWidth(6, 150) // created
+
+  Logger.log('Created _DB_Personer sheet')
 }
 
 /**
  * Create _DB_Program sheet (programme metadata)
  */
 function createDbProgramsSheet_() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName(DB.PROGRAMS);
-  
+  const ss = SpreadsheetApp.getActiveSpreadsheet()
+  let sheet = ss.getSheetByName(DB.PROGRAMS)
+
   if (sheet) {
-    sheet.clear();
+    sheet.clear()
   } else {
-    sheet = ss.insertSheet(DB.PROGRAMS);
+    sheet = ss.insertSheet(DB.PROGRAMS)
   }
-  
+
   // Set headers
-  const headerRange = sheet.getRange(1, 1, 1, PROGRAM_HEADERS.length);
-  headerRange.setValues([PROGRAM_HEADERS]);
-  headerRange.setBackground(COLOURS.HEADER_BG);
-  headerRange.setFontColor(COLOURS.HEADER_TEXT);
-  headerRange.setFontWeight('bold');
-  
-  sheet.setFrozenRows(1);
-  
+  const headerRange = sheet.getRange(1, 1, 1, PROGRAM_HEADERS.length)
+  headerRange.setValues([PROGRAM_HEADERS])
+  headerRange.setBackground(COLOURS.HEADER_BG)
+  headerRange.setFontColor(COLOURS.HEADER_TEXT)
+  headerRange.setFontWeight('bold')
+
+  sheet.setFrozenRows(1)
+
   // Set column widths
-  const widths = [80, 200, 120, 120, 150, 100, 100, 100, 300, 150, 150];
+  const widths = [80, 200, 120, 120, 150, 100, 100, 100, 300, 150, 150]
   widths.forEach((width, index) => {
-    sheet.setColumnWidth(index + 1, width);
-  });
-  
-  Logger.log('Created _DB_Program sheet');
+    sheet.setColumnWidth(index + 1, width)
+  })
+
+  Logger.log('Created _DB_Program sheet')
 }
 
 /**
  * Create _DB_PostTyper sheet (post type templates)
  */
 function createDbPostTypesSheet_() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName(DB.POST_TYPES);
-  
+  const ss = SpreadsheetApp.getActiveSpreadsheet()
+  let sheet = ss.getSheetByName(DB.POST_TYPES)
+
   if (sheet) {
-    sheet.clear();
+    sheet.clear()
   } else {
-    sheet = ss.insertSheet(DB.POST_TYPES);
+    sheet = ss.insertSheet(DB.POST_TYPES)
   }
-  
+
   // Set headers
-  const headerRange = sheet.getRange(1, 1, 1, POST_TYPE_HEADERS.length);
-  headerRange.setValues([POST_TYPE_HEADERS]);
-  headerRange.setBackground(COLOURS.HEADER_BG);
-  headerRange.setFontColor(COLOURS.HEADER_TEXT);
-  headerRange.setFontWeight('bold');
-  
-  sheet.setFrozenRows(1);
-  
+  const headerRange = sheet.getRange(1, 1, 1, POST_TYPE_HEADERS.length)
+  headerRange.setValues([POST_TYPE_HEADERS])
+  headerRange.setBackground(COLOURS.HEADER_BG)
+  headerRange.setFontColor(COLOURS.HEADER_TEXT)
+  headerRange.setFontWeight('bold')
+
+  sheet.setFrozenRows(1)
+
   // Set column widths
-  const widths = [120, 150, 100, 50, 100, 150, 120, 120, 100, 80, 300];
+  const widths = [120, 150, 100, 50, 100, 150, 120, 120, 100, 80, 300]
   widths.forEach((width, index) => {
-    sheet.setColumnWidth(index + 1, width);
-  });
-  
-  Logger.log('Created _DB_PostTyper sheet');
+    sheet.setColumnWidth(index + 1, width)
+  })
+
+  Logger.log('Created _DB_PostTyper sheet')
 }
 
 /**
  * Create _DB_Logg sheet (timecode logging)
  */
 function createDbLogSheet_() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName(DB.LOG);
-  
+  const ss = SpreadsheetApp.getActiveSpreadsheet()
+  let sheet = ss.getSheetByName(DB.LOG)
+
   if (sheet) {
-    sheet.clear();
+    sheet.clear()
   } else {
-    sheet = ss.insertSheet(DB.LOG);
+    sheet = ss.insertSheet(DB.LOG)
   }
-  
-  const headers = ['timestamp', 'post_id', 'operator', 'tc_in', 'tc_out', 'clip_nr', 'duration_sec', 'notes'];
-  
+
+  const headers = [
+    'timestamp',
+    'post_id',
+    'operator',
+    'tc_in',
+    'tc_out',
+    'clip_nr',
+    'duration_sec',
+    'notes',
+  ]
+
   // Set headers
-  const headerRange = sheet.getRange(1, 1, 1, headers.length);
-  headerRange.setValues([headers]);
-  headerRange.setBackground(COLOURS.HEADER_BG);
-  headerRange.setFontColor(COLOURS.HEADER_TEXT);
-  headerRange.setFontWeight('bold');
-  
-  sheet.setFrozenRows(1);
-  
+  const headerRange = sheet.getRange(1, 1, 1, headers.length)
+  headerRange.setValues([headers])
+  headerRange.setBackground(COLOURS.HEADER_BG)
+  headerRange.setFontColor(COLOURS.HEADER_TEXT)
+  headerRange.setFontWeight('bold')
+
+  sheet.setFrozenRows(1)
+
   // Set column widths
-  sheet.setColumnWidth(1, 150);  // timestamp
-  sheet.setColumnWidth(2, 80);   // post_id
-  sheet.setColumnWidth(3, 120);  // operator
-  sheet.setColumnWidth(4, 100);  // tc_in
-  sheet.setColumnWidth(5, 100);  // tc_out
-  sheet.setColumnWidth(6, 80);   // clip_nr
-  sheet.setColumnWidth(7, 100);  // duration_sec
-  sheet.setColumnWidth(8, 300);  // notes
-  
-  Logger.log('Created _DB_Logg sheet');
+  sheet.setColumnWidth(1, 150) // timestamp
+  sheet.setColumnWidth(2, 80) // post_id
+  sheet.setColumnWidth(3, 120) // operator
+  sheet.setColumnWidth(4, 100) // tc_in
+  sheet.setColumnWidth(5, 100) // tc_out
+  sheet.setColumnWidth(6, 80) // clip_nr
+  sheet.setColumnWidth(7, 100) // duration_sec
+  sheet.setColumnWidth(8, 300) // notes
+
+  Logger.log('Created _DB_Logg sheet')
 }
 
 /**
  * Create _DB_Settings sheet (system settings)
  */
 function createDbSettingsSheet_() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName(DB.SETTINGS);
-  
+  const ss = SpreadsheetApp.getActiveSpreadsheet()
+  let sheet = ss.getSheetByName(DB.SETTINGS)
+
   if (sheet) {
-    sheet.clear();
+    sheet.clear()
   } else {
-    sheet = ss.insertSheet(DB.SETTINGS);
+    sheet = ss.insertSheet(DB.SETTINGS)
   }
-  
-  const headers = ['setting_key', 'setting_value', 'description'];
-  
+
+  const headers = ['setting_key', 'setting_value', 'description']
+
   // Set headers
-  const headerRange = sheet.getRange(1, 1, 1, headers.length);
-  headerRange.setValues([headers]);
-  headerRange.setBackground(COLOURS.HEADER_BG);
-  headerRange.setFontColor(COLOURS.HEADER_TEXT);
-  headerRange.setFontWeight('bold');
-  
-  sheet.setFrozenRows(1);
-  
+  const headerRange = sheet.getRange(1, 1, 1, headers.length)
+  headerRange.setValues([headers])
+  headerRange.setBackground(COLOURS.HEADER_BG)
+  headerRange.setFontColor(COLOURS.HEADER_TEXT)
+  headerRange.setFontWeight('bold')
+
+  sheet.setFrozenRows(1)
+
   // Set column widths
-  sheet.setColumnWidth(1, 200);
-  sheet.setColumnWidth(2, 300);
-  sheet.setColumnWidth(3, 400);
-  
+  sheet.setColumnWidth(1, 200)
+  sheet.setColumnWidth(2, 300)
+  sheet.setColumnWidth(3, 400)
+
   // Add initial settings
   const initialSettings = [
     ['system_version', SYSTEM_VERSION, 'Current system version'],
     ['last_bootstrap', getTimestamp_(), 'Last time database was bootstrapped'],
     ['api_enabled', 'false', 'Enable external API (Companion integration)'],
     ['default_start_time', '09:00:00', 'Default start time for Day 1 recording'],
-    ['location_name', 'Caroli-kyrkan, Borås', 'Current recording location']
-  ];
-  
-  sheet.getRange(2, 1, initialSettings.length, 3).setValues(initialSettings);
-  
-  Logger.log('Created _DB_Settings sheet');
+    ['location_name', 'Caroli-kyrkan, Borås', 'Current recording location'],
+  ]
+
+  sheet.getRange(2, 1, initialSettings.length, 3).setValues(initialSettings)
+
+  Logger.log('Created _DB_Settings sheet')
 }
 
 /**
  * Create _DB_Audit sheet (audit log for tracking changes)
  */
 function createDbAuditSheet_() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName(DB.AUDIT);
+  const ss = SpreadsheetApp.getActiveSpreadsheet()
+  let sheet = ss.getSheetByName(DB.AUDIT)
 
   if (sheet) {
-    sheet.clear();
+    sheet.clear()
   } else {
-    sheet = ss.insertSheet(DB.AUDIT);
+    sheet = ss.insertSheet(DB.AUDIT)
   }
 
   const headers = [
-    'timestamp',      // When the action occurred
-    'user',           // Who performed the action (email if available)
-    'action',         // create, update, delete, restore, etc.
-    'entity_type',    // post, person, program, settings
-    'entity_id',      // ID of the affected entity
-    'field',          // Which field was changed (for updates)
-    'old_value',      // Previous value
-    'new_value',      // New value
-    'source'          // ui, api, trigger, import
-  ];
+    'timestamp', // When the action occurred
+    'user', // Who performed the action (email if available)
+    'action', // create, update, delete, restore, etc.
+    'entity_type', // post, person, program, settings
+    'entity_id', // ID of the affected entity
+    'field', // Which field was changed (for updates)
+    'old_value', // Previous value
+    'new_value', // New value
+    'source', // ui, api, trigger, import
+  ]
 
   // Set headers
-  const headerRange = sheet.getRange(1, 1, 1, headers.length);
-  headerRange.setValues([headers]);
-  headerRange.setBackground(COLOURS.HEADER_BG);
-  headerRange.setFontColor(COLOURS.HEADER_TEXT);
-  headerRange.setFontWeight('bold');
+  const headerRange = sheet.getRange(1, 1, 1, headers.length)
+  headerRange.setValues([headers])
+  headerRange.setBackground(COLOURS.HEADER_BG)
+  headerRange.setFontColor(COLOURS.HEADER_TEXT)
+  headerRange.setFontWeight('bold')
 
-  sheet.setFrozenRows(1);
+  sheet.setFrozenRows(1)
 
   // Set column widths
-  sheet.setColumnWidth(1, 160);  // timestamp
-  sheet.setColumnWidth(2, 200);  // user
-  sheet.setColumnWidth(3, 100);  // action
-  sheet.setColumnWidth(4, 100);  // entity_type
-  sheet.setColumnWidth(5, 100);  // entity_id
-  sheet.setColumnWidth(6, 120);  // field
-  sheet.setColumnWidth(7, 200);  // old_value
-  sheet.setColumnWidth(8, 200);  // new_value
-  sheet.setColumnWidth(9, 80);   // source
+  sheet.setColumnWidth(1, 160) // timestamp
+  sheet.setColumnWidth(2, 200) // user
+  sheet.setColumnWidth(3, 100) // action
+  sheet.setColumnWidth(4, 100) // entity_type
+  sheet.setColumnWidth(5, 100) // entity_id
+  sheet.setColumnWidth(6, 120) // field
+  sheet.setColumnWidth(7, 200) // old_value
+  sheet.setColumnWidth(8, 200) // new_value
+  sheet.setColumnWidth(9, 80) // source
 
-  Logger.log('Created _DB_Audit sheet');
+  Logger.log('Created _DB_Audit sheet')
 }
 
 /**
@@ -342,13 +352,13 @@ function createDbAuditSheet_() {
  */
 function logAudit_(auditData) {
   try {
-    const sheet = getDbSheet_(DB.AUDIT);
+    const sheet = getDbSheet_(DB.AUDIT)
 
     // Get current user if possible
-    let user = 'system';
+    let user = 'system'
     try {
-      const email = Session.getActiveUser().getEmail();
-      if (email) user = email;
+      const email = Session.getActiveUser().getEmail()
+      if (email) user = email
     } catch (e) {
       // Session may not be available in triggers
     }
@@ -360,16 +370,15 @@ function logAudit_(auditData) {
       auditData.entity_type || '',
       auditData.entity_id || '',
       auditData.field || '',
-      String(auditData.old_value || '').substring(0, 500),  // Truncate long values
+      String(auditData.old_value || '').substring(0, 500), // Truncate long values
       String(auditData.new_value || '').substring(0, 500),
-      auditData.source || 'unknown'
-    ];
+      auditData.source || 'unknown',
+    ]
 
-    sheet.appendRow(row);
-
+    sheet.appendRow(row)
   } catch (error) {
     // Don't let audit logging errors break the main operation
-    Logger.log(`Audit log error: ${error.message}`);
+    Logger.log(`Audit log error: ${error.message}`)
   }
 }
 
@@ -385,8 +394,8 @@ const CACHE_CONFIG = {
   POST_TYPES_KEY: 'cache_post_types',
   PEOPLE_KEY: 'cache_people',
   PROGRAMS_KEY: 'cache_programs',
-  TTL_SECONDS: 300  // 5 minutes
-};
+  TTL_SECONDS: 300, // 5 minutes
+}
 
 /**
  * Get cached data or fetch from sheet
@@ -395,50 +404,46 @@ const CACHE_CONFIG = {
  * @returns {Array} - Cached or fresh data
  */
 function getCachedData_(cacheKey, fetchFn) {
-  const cache = CacheService.getScriptCache();
+  const cache = CacheService.getScriptCache()
 
   try {
-    const cached = cache.get(cacheKey);
+    const cached = cache.get(cacheKey)
     if (cached) {
-      return JSON.parse(cached);
+      return JSON.parse(cached)
     }
   } catch (e) {
     // Cache miss or parse error
   }
 
   // Fetch fresh data
-  const data = fetchFn();
+  const data = fetchFn()
 
   // Store in cache
   try {
-    cache.put(cacheKey, JSON.stringify(data), CACHE_CONFIG.TTL_SECONDS);
+    cache.put(cacheKey, JSON.stringify(data), CACHE_CONFIG.TTL_SECONDS)
   } catch (e) {
     // Cache too large, skip caching
-    Logger.log(`Cache put failed for ${cacheKey}: ${e.message}`);
+    Logger.log(`Cache put failed for ${cacheKey}: ${e.message}`)
   }
 
-  return data;
+  return data
 }
 
 /**
  * Invalidate specific cache
  */
 function invalidateCache_(cacheKey) {
-  const cache = CacheService.getScriptCache();
-  cache.remove(cacheKey);
+  const cache = CacheService.getScriptCache()
+  cache.remove(cacheKey)
 }
 
 /**
  * Invalidate all caches
  */
 function invalidateAllCaches() {
-  const cache = CacheService.getScriptCache();
-  cache.removeAll([
-    CACHE_CONFIG.POST_TYPES_KEY,
-    CACHE_CONFIG.PEOPLE_KEY,
-    CACHE_CONFIG.PROGRAMS_KEY
-  ]);
-  Logger.log('All caches invalidated');
+  const cache = CacheService.getScriptCache()
+  cache.removeAll([CACHE_CONFIG.POST_TYPES_KEY, CACHE_CONFIG.PEOPLE_KEY, CACHE_CONFIG.PROGRAMS_KEY])
+  Logger.log('All caches invalidated')
 }
 
 /**
@@ -446,10 +451,10 @@ function invalidateAllCaches() {
  */
 function getAllPostTypesCached_() {
   return getCachedData_(CACHE_CONFIG.POST_TYPES_KEY, () => {
-    const sheet = getDbSheet_(DB.POST_TYPES);
-    const data = sheet.getDataRange().getValues();
-    return data.slice(1);  // Skip header
-  });
+    const sheet = getDbSheet_(DB.POST_TYPES)
+    const data = sheet.getDataRange().getValues()
+    return data.slice(1) // Skip header
+  })
 }
 
 /**
@@ -457,20 +462,20 @@ function getAllPostTypesCached_() {
  */
 function getAllPeopleCached_() {
   return getCachedData_(CACHE_CONFIG.PEOPLE_KEY, () => {
-    const sheet = getDbSheet_(DB.PEOPLE);
-    const data = sheet.getDataRange().getValues();
-    return data.slice(1);  // Skip header
-  });
+    const sheet = getDbSheet_(DB.PEOPLE)
+    const data = sheet.getDataRange().getValues()
+    return data.slice(1) // Skip header
+  })
 }
 
 /**
  * Get post type by key with caching
  */
 function getPostTypeByKeyCached_(typeKey) {
-  const postTypes = getAllPostTypesCached_();
+  const postTypes = getAllPostTypesCached_()
 
   for (let i = 0; i < postTypes.length; i++) {
-    const row = postTypes[i];
+    const row = postTypes[i]
     if (row[POST_TYPE_SCHEMA.TYPE_KEY] === typeKey) {
       return {
         type_key: row[POST_TYPE_SCHEMA.TYPE_KEY],
@@ -483,47 +488,47 @@ function getPostTypeByKeyCached_(typeKey) {
         category: row[POST_TYPE_SCHEMA.CATEGORY],
         bg_colour: row[POST_TYPE_SCHEMA.BG_COLOUR],
         row_height: row[POST_TYPE_SCHEMA.ROW_HEIGHT],
-        description: row[POST_TYPE_SCHEMA.DESCRIPTION]
-      };
+        description: row[POST_TYPE_SCHEMA.DESCRIPTION],
+      }
     }
   }
 
-  return null;
+  return null
 }
 
 /**
  * Find person by name with caching
  */
 function findPersonByNameCached_(name) {
-  if (!name) return null;
+  if (!name) return null
 
-  const people = getAllPeopleCached_();
-  const searchName = name.toLowerCase().trim();
+  const people = getAllPeopleCached_()
+  const searchName = name.toLowerCase().trim()
 
   for (let i = 0; i < people.length; i++) {
     if (people[i][PERSON_SCHEMA.NAME].toLowerCase().trim() === searchName) {
-      return people[i];
+      return people[i]
     }
   }
 
-  return null;
+  return null
 }
 
 /**
  * Get person name by ID with caching
  */
 function getPersonNameByIdCached_(personId) {
-  if (!personId) return '';
+  if (!personId) return ''
 
-  const people = getAllPeopleCached_();
+  const people = getAllPeopleCached_()
 
   for (let i = 0; i < people.length; i++) {
     if (people[i][PERSON_SCHEMA.ID] === personId) {
-      return people[i][PERSON_SCHEMA.NAME];
+      return people[i][PERSON_SCHEMA.NAME]
     }
   }
 
-  return personId;  // Return ID if not found
+  return personId // Return ID if not found
 }
 
 // ============================================================================
@@ -534,48 +539,49 @@ function getPersonNameByIdCached_(personId) {
  * Seed post types with default templates
  */
 function seedPostTypes_() {
-  const sheet = getDbSheet_(DB.POST_TYPES);
-  
+  const sheet = getDbSheet_(DB.POST_TYPES)
+
   // Clear existing data (keep headers)
-  const lastRow = sheet.getLastRow();
+  const lastRow = sheet.getLastRow()
   if (lastRow > 1) {
-    sheet.deleteRows(2, lastRow - 1);
+    sheet.deleteRows(2, lastRow - 1)
   }
-  
+
   // Insert default post types
   if (DEFAULT_POST_TYPES.length > 0) {
-    sheet.getRange(2, 1, DEFAULT_POST_TYPES.length, DEFAULT_POST_TYPES[0].length)
-      .setValues(DEFAULT_POST_TYPES);
+    sheet
+      .getRange(2, 1, DEFAULT_POST_TYPES.length, DEFAULT_POST_TYPES[0].length)
+      .setValues(DEFAULT_POST_TYPES)
   }
-  
-  Logger.log(`Seeded ${DEFAULT_POST_TYPES.length} post types`);
+
+  Logger.log(`Seeded ${DEFAULT_POST_TYPES.length} post types`)
 }
 
 /**
  * Seed programmes with initial metadata (empty, ready to fill)
  */
 function seedPrograms_() {
-  const sheet = getDbSheet_(DB.PROGRAMS);
-  
+  const sheet = getDbSheet_(DB.PROGRAMS)
+
   // Clear existing data
-  const lastRow = sheet.getLastRow();
+  const lastRow = sheet.getLastRow()
   if (lastRow > 1) {
-    sheet.deleteRows(2, lastRow - 1);
+    sheet.deleteRows(2, lastRow - 1)
   }
-  
-  const timestamp = getTimestamp_();
-  
+
+  const timestamp = getTimestamp_()
+
   // Create 4 empty programme entries
   const programData = [
     [1, 'Caroli-kyrkan, Borås', '', '', '', '', 2610, '09:00:00', '', timestamp, timestamp],
     [2, 'Caroli-kyrkan, Borås', '', '', '', '', 2610, '09:00:00', '', timestamp, timestamp],
     [3, 'Caroli-kyrkan, Borås', '', '', '', '', 2610, '09:00:00', '', timestamp, timestamp],
-    [4, 'Caroli-kyrkan, Borås', '', '', '', '', 2610, '09:00:00', '', timestamp, timestamp]
-  ];
-  
-  sheet.getRange(2, 1, programData.length, programData[0].length).setValues(programData);
-  
-  Logger.log('Seeded 4 programme entries');
+    [4, 'Caroli-kyrkan, Borås', '', '', '', '', 2610, '09:00:00', '', timestamp, timestamp],
+  ]
+
+  sheet.getRange(2, 1, programData.length, programData[0].length).setValues(programData)
+
+  Logger.log('Seeded 4 programme entries')
 }
 
 // ============================================================================
@@ -588,50 +594,50 @@ function seedPrograms_() {
  * @returns {String} - Created post_id
  */
 function createPost(postData) {
-  const sheet = getDbSheet_(DB.POSTS);
-  const timestamp = getTimestamp_();
-  
+  const sheet = getDbSheet_(DB.POSTS)
+  const timestamp = getTimestamp_()
+
   // Generate post_id: P{program_nr}:{next_sequence}
-  const nextSeq = getNextPostSequence_(postData.program_nr);
-  const postId = `P${postData.program_nr}:${nextSeq}`;
-  
+  const nextSeq = getNextPostSequence_(postData.program_nr)
+  const postId = `P${postData.program_nr}:${nextSeq}`
+
   // Get default values from post type if specified
-  let defaultDuration = 60;  // 1 minute default
-  let defaultType = postData.type || 'liturgi';
-  
+  let defaultDuration = 60 // 1 minute default
+  let defaultType = postData.type || 'liturgi'
+
   if (postData.type) {
-    const postType = getPostTypeByKey_(postData.type);
+    const postType = getPostTypeByKey_(postData.type)
     if (postType) {
-      defaultDuration = postType.default_duration_sec || defaultDuration;
+      defaultDuration = postType.default_duration_sec || defaultDuration
     }
   }
-  
+
   // Build row data (follow POST_SCHEMA order)
   const row = [
-    postId,                                    // ID
-    postData.program_nr,                       // PROGRAM_NR
-    postData.sort_order || nextSeq,            // SORT_ORDER
-    defaultType,                               // TYPE
-    postData.title || '',                      // TITLE
-    postData.duration || defaultDuration,      // DURATION
-    postData.people_ids || '',                 // PEOPLE_IDS
-    postData.location || '',                   // LOCATION
-    postData.info_pos || '',                   // INFO_POS
-    postData.graphics || '',                   // GRAPHICS
-    postData.notes || '',                      // NOTES
-    postData.recording_day || 'dag1',          // RECORDING_DAY
-    postData.recording_time || '',             // RECORDING_TIME
-    POST_STATUS.PLANNED.key,                   // STATUS
-    postData.text_author || '',                // TEXT_AUTHOR
-    postData.composer || '',                   // COMPOSER
-    postData.arranger || '',                   // ARRANGER
-    postData.open_text || false,               // OPEN_TEXT
-    timestamp,                                 // CREATED
-    timestamp                                  // MODIFIED
-  ];
-  
+    postId, // ID
+    postData.program_nr, // PROGRAM_NR
+    postData.sort_order || nextSeq, // SORT_ORDER
+    defaultType, // TYPE
+    postData.title || '', // TITLE
+    postData.duration || defaultDuration, // DURATION
+    postData.people_ids || '', // PEOPLE_IDS
+    postData.location || '', // LOCATION
+    postData.info_pos || '', // INFO_POS
+    postData.graphics || '', // GRAPHICS
+    postData.notes || '', // NOTES
+    postData.recording_day || 'day1', // RECORDING_DAY
+    postData.recording_time || '', // RECORDING_TIME
+    POST_STATUS.PLANNED.key, // STATUS
+    postData.text_author || '', // TEXT_AUTHOR
+    postData.composer || '', // COMPOSER
+    postData.arranger || '', // ARRANGER
+    postData.open_text || false, // OPEN_TEXT
+    timestamp, // CREATED
+    timestamp, // MODIFIED
+  ]
+
   // Append to sheet
-  sheet.appendRow(row);
+  sheet.appendRow(row)
 
   // Audit log
   logAudit_({
@@ -639,32 +645,32 @@ function createPost(postData) {
     entity_type: 'post',
     entity_id: postId,
     new_value: postData.title || '',
-    source: postData._source || 'ui'
-  });
+    source: postData._source || 'ui',
+  })
 
-  Logger.log(`Created post: ${postId}`);
-  return postId;
+  Logger.log(`Created post: ${postId}`)
+  return postId
 }
 
 /**
  * Get next sequence number for a programme
  */
 function getNextPostSequence_(programNr) {
-  const posts = getAllPostsForProgram_(programNr);
-  
-  if (posts.length === 0) return 1;
-  
+  const posts = getAllPostsForProgram_(programNr)
+
+  if (posts.length === 0) return 1
+
   // Find highest sequence number
-  let maxSeq = 0;
-  posts.forEach(post => {
-    const match = post[POST_SCHEMA.ID].match(/:(\d+)$/);
+  let maxSeq = 0
+  posts.forEach((post) => {
+    const match = post[POST_SCHEMA.ID].match(/:(\d+)$/)
     if (match) {
-      const seq = parseInt(match[1], 10);
-      if (seq > maxSeq) maxSeq = seq;
+      const seq = parseInt(match[1], 10)
+      if (seq > maxSeq) maxSeq = seq
     }
-  });
-  
-  return maxSeq + 1;
+  })
+
+  return maxSeq + 1
 }
 
 /**
@@ -673,11 +679,11 @@ function getNextPostSequence_(programNr) {
  * @returns {Array} - Array of post rows
  */
 function getAllPostsForProgram_(programNr) {
-  const sheet = getDbSheet_(DB.POSTS);
-  const data = sheet.getDataRange().getValues();
-  
+  const sheet = getDbSheet_(DB.POSTS)
+  const data = sheet.getDataRange().getValues()
+
   // Skip header row, filter by program_nr
-  return data.slice(1).filter(row => row[POST_SCHEMA.PROGRAM_NR] === programNr);
+  return data.slice(1).filter((row) => row[POST_SCHEMA.PROGRAM_NR] === programNr)
 }
 
 /**
@@ -687,50 +693,51 @@ function getAllPostsForProgram_(programNr) {
  * @param {String} source - Source of update (ui, api, trigger)
  */
 function updatePost(postId, updates, source) {
-  const sheet = getDbSheet_(DB.POSTS);
-  const data = sheet.getDataRange().getValues();
+  const sheet = getDbSheet_(DB.POSTS)
+  const data = sheet.getDataRange().getValues()
 
   // Find row with matching post_id
-  let rowIndex = -1;
-  for (let i = 1; i < data.length; i++) {  // Skip header
+  let rowIndex = -1
+  for (let i = 1; i < data.length; i++) {
+    // Skip header
     if (data[i][POST_SCHEMA.ID] === postId) {
-      rowIndex = i + 1;  // Sheet rows are 1-based
-      break;
+      rowIndex = i + 1 // Sheet rows are 1-based
+      break
     }
   }
 
   if (rowIndex === -1) {
-    throw new Error(`Post ${postId} not found`);
+    throw new Error(`Post ${postId} not found`)
   }
 
   // Get existing row data for audit logging
-  const oldRow = [...data[rowIndex - 1]];
-  const row = data[rowIndex - 1];
+  const oldRow = [...data[rowIndex - 1]]
+  const row = data[rowIndex - 1]
 
   // Track changes for audit
-  const changes = [];
+  const changes = []
 
-  Object.keys(updates).forEach(key => {
-    if (key.startsWith('_')) return;  // Skip internal fields like _source
-    const schemaIndex = POST_SCHEMA[key.toUpperCase()];
+  Object.keys(updates).forEach((key) => {
+    if (key.startsWith('_')) return // Skip internal fields like _source
+    const schemaIndex = POST_SCHEMA[key.toUpperCase()]
     if (schemaIndex !== undefined) {
-      const oldValue = row[schemaIndex];
-      const newValue = updates[key];
+      const oldValue = row[schemaIndex]
+      const newValue = updates[key]
       if (oldValue !== newValue) {
-        changes.push({ field: key, oldValue, newValue });
+        changes.push({ field: key, oldValue, newValue })
       }
-      row[schemaIndex] = newValue;
+      row[schemaIndex] = newValue
     }
-  });
+  })
 
   // Update modified timestamp
-  row[POST_SCHEMA.MODIFIED] = getTimestamp_();
+  row[POST_SCHEMA.MODIFIED] = getTimestamp_()
 
   // Write back to sheet
-  sheet.getRange(rowIndex, 1, 1, row.length).setValues([row]);
+  sheet.getRange(rowIndex, 1, 1, row.length).setValues([row])
 
   // Audit log for each changed field
-  changes.forEach(change => {
+  changes.forEach((change) => {
     logAudit_({
       action: 'update',
       entity_type: 'post',
@@ -738,11 +745,11 @@ function updatePost(postId, updates, source) {
       field: change.field,
       old_value: change.oldValue,
       new_value: change.newValue,
-      source: source || updates._source || 'ui'
-    });
-  });
+      source: source || updates._source || 'ui',
+    })
+  })
 
-  Logger.log(`Updated post: ${postId}`);
+  Logger.log(`Updated post: ${postId}`)
 }
 
 /**
@@ -750,59 +757,58 @@ function updatePost(postId, updates, source) {
  * @param {Number} programNr - Programme number (1-4)
  */
 function renumberPostsForProgram_(programNr) {
-  const sheet = getDbSheet_(DB.POSTS);
-  const data = sheet.getDataRange().getValues();
+  const sheet = getDbSheet_(DB.POSTS)
+  const data = sheet.getDataRange().getValues()
 
   // Get all posts for this program with their row indices
-  const posts = [];
+  const posts = []
   for (let i = 1; i < data.length; i++) {
     if (data[i][POST_SCHEMA.PROGRAM_NR] === programNr) {
       posts.push({
-        rowIndex: i + 1,  // 1-based
+        rowIndex: i + 1, // 1-based
         sortOrder: data[i][POST_SCHEMA.SORT_ORDER],
-        postId: data[i][POST_SCHEMA.ID]
-      });
+        postId: data[i][POST_SCHEMA.ID],
+      })
     }
   }
 
   // Sort by current sort_order
-  posts.sort((a, b) => a.sortOrder - b.sortOrder);
+  posts.sort((a, b) => a.sortOrder - b.sortOrder)
 
   // Renumber sequentially (10, 20, 30, ...)
   posts.forEach((post, index) => {
-    const newSortOrder = (index + 1) * 10;
-    sheet.getRange(post.rowIndex, POST_SCHEMA.SORT_ORDER + 1).setValue(newSortOrder);
-  });
+    const newSortOrder = (index + 1) * 10
+    sheet.getRange(post.rowIndex, POST_SCHEMA.SORT_ORDER + 1).setValue(newSortOrder)
+  })
 
-  Logger.log(`Renumbered ${posts.length} posts for Program ${programNr}`);
+  Logger.log(`Renumbered ${posts.length} posts for Program ${programNr}`)
 }
 
 /**
  * Renumber all posts in all programs
  */
 function renumberAllPosts() {
-  const ui = SpreadsheetApp.getUi();
+  const ui = SpreadsheetApp.getUi()
 
   const confirm = ui.alert(
-    'Omnumrera poster',
-    'Detta kommer att omnumrera alla poster i alla program (1-4) så att sort_order blir sekventiell (10, 20, 30...).\n\nOrdningen på posterna ändras INTE, bara de interna sorteringsnumren.\n\nFortsätt?',
-    ui.ButtonSet.YES_NO
-  );
+    'Renumber posts',
+    'This will renumber all posts in all programmes (1-4) so that sort_order becomes sequential (10, 20, 30...).\n\nThe order of posts will NOT change, only the internal sort numbers.\n\nContinue?',
+    ui.ButtonSet.YES_NO,
+  )
 
   if (confirm !== ui.Button.YES) {
-    return;
+    return
   }
 
   try {
     for (let i = 1; i <= 4; i++) {
-      renumberPostsForProgram_(i);
+      renumberPostsForProgram_(i)
     }
 
-    ui.alert('Klart!', 'Alla poster har omnumrerats.', ui.ButtonSet.OK);
-
+    ui.alert('Complete!', 'All posts have been renumbered.', ui.ButtonSet.OK)
   } catch (error) {
-    ui.alert('Fel', `Kunde inte omnumrera: ${error.message}`, ui.ButtonSet.OK);
-    Logger.log(`Renumber error: ${error.stack}`);
+    ui.alert('Error', `Could not renumber: ${error.message}`, ui.ButtonSet.OK)
+    Logger.log(`Renumber error: ${error.stack}`)
   }
 }
 
@@ -812,27 +818,27 @@ function renumberAllPosts() {
  * @param {Boolean} hardDelete - If true, permanently deletes (default: false)
  */
 function deletePost(postId, hardDelete) {
-  const sheet = getDbSheet_(DB.POSTS);
-  const data = sheet.getDataRange().getValues();
+  const sheet = getDbSheet_(DB.POSTS)
+  const data = sheet.getDataRange().getValues()
 
   // Find row
-  let rowIndex = -1;
-  let postData = null;
+  let rowIndex = -1
+  let postData = null
   for (let i = 1; i < data.length; i++) {
     if (data[i][POST_SCHEMA.ID] === postId) {
-      rowIndex = i + 1;
-      postData = data[i];
-      break;
+      rowIndex = i + 1
+      postData = data[i]
+      break
     }
   }
 
   if (rowIndex === -1) {
-    throw new Error(`Post ${postId} not found`);
+    throw new Error(`Post ${postId} not found`)
   }
 
   // Soft delete: archive to trash before deletion
   if (!hardDelete) {
-    archiveDeletedPost_(postData);
+    archiveDeletedPost_(postData)
   }
 
   // Audit log
@@ -841,47 +847,47 @@ function deletePost(postId, hardDelete) {
     entity_type: 'post',
     entity_id: postId,
     old_value: postData[POST_SCHEMA.TITLE],
-    source: 'ui'
-  });
+    source: 'ui',
+  })
 
-  sheet.deleteRow(rowIndex);
-  Logger.log(`Deleted post: ${postId} (hard=${!!hardDelete})`);
+  sheet.deleteRow(rowIndex)
+  Logger.log(`Deleted post: ${postId} (hard=${!!hardDelete})`)
 }
 
 /**
  * Archive deleted post to trash sheet for potential recovery
  */
 function archiveDeletedPost_(postData) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let trashSheet = ss.getSheetByName('_DB_Trash');
+  const ss = SpreadsheetApp.getActiveSpreadsheet()
+  let trashSheet = ss.getSheetByName('_DB_Trash')
 
   // Create trash sheet if it doesn't exist
   if (!trashSheet) {
-    trashSheet = ss.insertSheet('_DB_Trash');
+    trashSheet = ss.insertSheet('_DB_Trash')
 
     // Set headers (same as posts + deleted_at + deleted_by)
-    const headers = [...POST_HEADERS, 'deleted_at', 'deleted_by'];
-    const headerRange = trashSheet.getRange(1, 1, 1, headers.length);
-    headerRange.setValues([headers]);
-    headerRange.setBackground(COLOURS.HEADER_BG);
-    headerRange.setFontColor(COLOURS.HEADER_TEXT);
-    headerRange.setFontWeight('bold');
-    trashSheet.setFrozenRows(1);
-    trashSheet.hideSheet();
+    const headers = [...POST_HEADERS, 'deleted_at', 'deleted_by']
+    const headerRange = trashSheet.getRange(1, 1, 1, headers.length)
+    headerRange.setValues([headers])
+    headerRange.setBackground(COLOURS.HEADER_BG)
+    headerRange.setFontColor(COLOURS.HEADER_TEXT)
+    headerRange.setFontWeight('bold')
+    trashSheet.setFrozenRows(1)
+    trashSheet.hideSheet()
   }
 
   // Get current user
-  let deletedBy = 'system';
+  let deletedBy = 'system'
   try {
-    const email = Session.getActiveUser().getEmail();
-    if (email) deletedBy = email;
+    const email = Session.getActiveUser().getEmail()
+    if (email) deletedBy = email
   } catch (e) {}
 
   // Append post to trash with deletion metadata
-  const trashRow = [...postData, getTimestamp_(), deletedBy];
-  trashSheet.appendRow(trashRow);
+  const trashRow = [...postData, getTimestamp_(), deletedBy]
+  trashSheet.appendRow(trashRow)
 
-  Logger.log(`Archived post ${postData[POST_SCHEMA.ID]} to trash`);
+  Logger.log(`Archived post ${postData[POST_SCHEMA.ID]} to trash`)
 }
 
 /**
@@ -889,39 +895,39 @@ function archiveDeletedPost_(postData) {
  * @param {String} postId - Post ID to restore
  */
 function restoreDeletedPost(postId) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const trashSheet = ss.getSheetByName('_DB_Trash');
+  const ss = SpreadsheetApp.getActiveSpreadsheet()
+  const trashSheet = ss.getSheetByName('_DB_Trash')
 
   if (!trashSheet) {
-    throw new Error('Ingen papperskorg hittades');
+    throw new Error('No recycle bin found')
   }
 
-  const trashData = trashSheet.getDataRange().getValues();
-  let rowIndex = -1;
-  let postData = null;
+  const trashData = trashSheet.getDataRange().getValues()
+  let rowIndex = -1
+  let postData = null
 
   for (let i = 1; i < trashData.length; i++) {
     if (trashData[i][POST_SCHEMA.ID] === postId) {
-      rowIndex = i + 1;
-      postData = trashData[i].slice(0, POST_HEADERS.length);  // Remove deleted_at, deleted_by
-      break;
+      rowIndex = i + 1
+      postData = trashData[i].slice(0, POST_HEADERS.length) // Remove deleted_at, deleted_by
+      break
     }
   }
 
   if (rowIndex === -1) {
-    throw new Error(`Post ${postId} hittades inte i papperskorgen`);
+    throw new Error(`Post ${postId} not found in recycle bin`)
   }
 
   // Restore to main posts sheet
-  const postsSheet = getDbSheet_(DB.POSTS);
+  const postsSheet = getDbSheet_(DB.POSTS)
 
   // Update timestamps
-  postData[POST_SCHEMA.MODIFIED] = getTimestamp_();
+  postData[POST_SCHEMA.MODIFIED] = getTimestamp_()
 
-  postsSheet.appendRow(postData);
+  postsSheet.appendRow(postData)
 
   // Remove from trash
-  trashSheet.deleteRow(rowIndex);
+  trashSheet.deleteRow(rowIndex)
 
   // Audit log
   logAudit_({
@@ -929,73 +935,73 @@ function restoreDeletedPost(postId) {
     entity_type: 'post',
     entity_id: postId,
     new_value: postData[POST_SCHEMA.TITLE],
-    source: 'ui'
-  });
+    source: 'ui',
+  })
 
-  Logger.log(`Restored post ${postId} from trash`);
-  return postId;
+  Logger.log(`Restored post ${postId} from trash`)
+  return postId
 }
 
 /**
  * Get all deleted posts from trash
  */
 function getDeletedPosts_() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const trashSheet = ss.getSheetByName('_DB_Trash');
+  const ss = SpreadsheetApp.getActiveSpreadsheet()
+  const trashSheet = ss.getSheetByName('_DB_Trash')
 
   if (!trashSheet) {
-    return [];
+    return []
   }
 
-  const data = trashSheet.getDataRange().getValues();
-  return data.slice(1).map(row => ({
+  const data = trashSheet.getDataRange().getValues()
+  return data.slice(1).map((row) => ({
     post_id: row[POST_SCHEMA.ID],
     program_nr: row[POST_SCHEMA.PROGRAM_NR],
     title: row[POST_SCHEMA.TITLE],
     type: row[POST_SCHEMA.TYPE],
     deleted_at: row[POST_HEADERS.length],
-    deleted_by: row[POST_HEADERS.length + 1]
-  }));
+    deleted_by: row[POST_HEADERS.length + 1],
+  }))
 }
 
 /**
  * Empty trash (permanently delete all trashed posts)
  */
 function emptyTrash() {
-  const ui = SpreadsheetApp.getUi();
+  const ui = SpreadsheetApp.getUi()
 
   const confirm = ui.alert(
-    'Töm papperskorgen?',
-    'Detta kommer att PERMANENT radera alla poster i papperskorgen.\n\nDetta kan inte ångras!',
-    ui.ButtonSet.YES_NO
-  );
+    'Empty recycle bin?',
+    'This will PERMANENTLY delete all posts in the recycle bin.\n\nThis cannot be undone!',
+    ui.ButtonSet.YES_NO,
+  )
 
   if (confirm !== ui.Button.YES) {
-    return;
+    return
   }
 
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const trashSheet = ss.getSheetByName('_DB_Trash');
+  const ss = SpreadsheetApp.getActiveSpreadsheet()
+  const trashSheet = ss.getSheetByName('_DB_Trash')
 
   if (!trashSheet) {
-    ui.alert('Papperskorgen är tom');
-    return;
+    ui.alert('Recycle bin is empty')
+    return
   }
 
-  const count = trashSheet.getLastRow() - 1;
+  const count = trashSheet.getLastRow() - 1
 
   if (count > 0) {
-    trashSheet.deleteRows(2, count);
+    trashSheet.deleteRows(2, count)
 
     logAudit_({
       action: 'empty_trash',
       entity_type: 'system',
       old_value: `${count} posts`,
-      source: 'ui'
-    });
+      source: 'ui',
+    })
   }
 
-  ui.alert('Papperskorgen tömd', `${count} poster har raderats permanent.`, ui.ButtonSet.OK);
+  ui.alert('Recycle bin emptied', `${count} posts have been permanently deleted.`, ui.ButtonSet.OK)
 }
 
 // ============================================================================
@@ -1007,34 +1013,34 @@ function emptyTrash() {
  * Creates a JSON backup of the program and all its posts
  */
 function archiveProgram(programNr) {
-  const ui = SpreadsheetApp.getUi();
+  const ui = SpreadsheetApp.getUi()
 
   // Validate program number
   if (programNr < 1 || programNr > 4) {
-    throw new Error('Invalid program number. Must be 1-4.');
+    throw new Error('Invalid program number. Must be 1-4.')
   }
 
   // Get program data
-  const programsSheet = getDbSheet_(DB.PROGRAMS);
-  const programsData = programsSheet.getDataRange().getValues();
-  let programRow = null;
+  const programsSheet = getDbSheet_(DB.PROGRAMS)
+  const programsData = programsSheet.getDataRange().getValues()
+  let programRow = null
 
   for (let i = 1; i < programsData.length; i++) {
     if (programsData[i][0] === programNr) {
-      programRow = programsData[i];
-      break;
+      programRow = programsData[i]
+      break
     }
   }
 
   if (!programRow) {
-    throw new Error(`Program ${programNr} not found`);
+    throw new Error(`Program ${programNr} not found`)
   }
 
   // Get all posts for this program
-  const posts = getAllPostsForProgram_(programNr);
+  const posts = getAllPostsForProgram_(programNr)
 
   if (posts.length === 0) {
-    throw new Error(`Program ${programNr} has no posts to archive`);
+    throw new Error(`Program ${programNr} has no posts to archive`)
   }
 
   // Build archive object (use PROGRAM_SCHEMA for correct indices)
@@ -1050,9 +1056,9 @@ function archiveProgram(programNr) {
       prod_nr: programRow[PROGRAM_SCHEMA.PROD_NR],
       target_duration: programRow[PROGRAM_SCHEMA.TARGET_LENGTH],
       start_time: programRow[PROGRAM_SCHEMA.START_TIME],
-      notes: programRow[PROGRAM_SCHEMA.NOTES]
+      notes: programRow[PROGRAM_SCHEMA.NOTES],
     },
-    posts: posts.map(row => ({
+    posts: posts.map((row) => ({
       post_id: row[POST_SCHEMA.ID],
       sort_order: row[POST_SCHEMA.SORT_ORDER],
       type: row[POST_SCHEMA.TYPE],
@@ -1071,24 +1077,24 @@ function archiveProgram(programNr) {
       arranger: row[POST_SCHEMA.ARRANGER],
       open_text: row[POST_SCHEMA.OPEN_TEXT],
       created: row[POST_SCHEMA.CREATED],
-      modified: row[POST_SCHEMA.MODIFIED]
+      modified: row[POST_SCHEMA.MODIFIED],
     })),
     stats: {
       total_posts: posts.length,
       total_duration: posts.reduce((sum, p) => sum + (p[POST_SCHEMA.DURATION] || 0), 0),
       by_status: {
-        planned: posts.filter(p => p[POST_SCHEMA.STATUS] === POST_STATUS.PLANNED.key).length,
-        recorded: posts.filter(p => p[POST_SCHEMA.STATUS] === POST_STATUS.RECORDED.key).length,
-        approved: posts.filter(p => p[POST_SCHEMA.STATUS] === POST_STATUS.APPROVED.key).length
-      }
-    }
-  };
+        planned: posts.filter((p) => p[POST_SCHEMA.STATUS] === POST_STATUS.PLANNED.key).length,
+        recorded: posts.filter((p) => p[POST_SCHEMA.STATUS] === POST_STATUS.RECORDED.key).length,
+        approved: posts.filter((p) => p[POST_SCHEMA.STATUS] === POST_STATUS.APPROVED.key).length,
+      },
+    },
+  }
 
   // Save to Google Drive
-  const folder = getOrCreateArchiveFolder_();
-  const filename = `archive_program${programNr}_${archive.program.production_date || 'undated'}_${getTimestamp_().replace(/[: ]/g, '-')}.json`;
+  const folder = getOrCreateArchiveFolder_()
+  const filename = `archive_program${programNr}_${archive.program.production_date || 'undated'}_${getTimestamp_().replace(/[: ]/g, '-')}.json`
 
-  folder.createFile(filename, JSON.stringify(archive, null, 2), MimeType.PLAIN_TEXT);
+  folder.createFile(filename, JSON.stringify(archive, null, 2), MimeType.PLAIN_TEXT)
 
   // Audit log
   logAudit_({
@@ -1096,94 +1102,98 @@ function archiveProgram(programNr) {
     entity_type: 'program',
     entity_id: String(programNr),
     new_value: filename,
-    source: 'ui'
-  });
+    source: 'ui',
+  })
 
-  Logger.log(`Archived program ${programNr} to ${filename}`);
+  Logger.log(`Archived program ${programNr} to ${filename}`)
 
-  return { success: true, filename: filename, posts_count: posts.length };
+  return { success: true, filename: filename, posts_count: posts.length }
 }
 
 /**
  * Get or create archive folder in Google Drive
  */
 function getOrCreateArchiveFolder_() {
-  const folderName = 'Gudstjänst_Arkiv';
+  const folderName = 'ChurchService_Archive'
 
   // Check if we have a stored folder ID
-  const settingsSheet = getDbSheet_(DB.SETTINGS);
-  const settingsData = settingsSheet.getDataRange().getValues();
+  const settingsSheet = getDbSheet_(DB.SETTINGS)
+  const settingsData = settingsSheet.getDataRange().getValues()
 
-  let folderId = null;
+  let folderId = null
   for (let i = 1; i < settingsData.length; i++) {
     if (settingsData[i][0] === 'archive_folder_id') {
-      folderId = settingsData[i][1];
-      break;
+      folderId = settingsData[i][1]
+      break
     }
   }
 
   // Try to get existing folder
   if (folderId) {
     try {
-      return DriveApp.getFolderById(folderId);
+      return DriveApp.getFolderById(folderId)
     } catch (e) {
       // Folder was deleted or not accessible
     }
   }
 
   // Create new folder
-  const folder = DriveApp.createFolder(folderName);
-  const newFolderId = folder.getId();
+  const folder = DriveApp.createFolder(folderName)
+  const newFolderId = folder.getId()
 
   // Store folder ID in settings
-  let found = false;
+  let found = false
   for (let i = 1; i < settingsData.length; i++) {
     if (settingsData[i][0] === 'archive_folder_id') {
-      settingsSheet.getRange(i + 1, 2).setValue(newFolderId);
-      found = true;
-      break;
+      settingsSheet.getRange(i + 1, 2).setValue(newFolderId)
+      found = true
+      break
     }
   }
   if (!found) {
-    settingsSheet.appendRow(['archive_folder_id', newFolderId, 'Google Drive folder for archived programs']);
+    settingsSheet.appendRow([
+      'archive_folder_id',
+      newFolderId,
+      'Google Drive folder for archived programs',
+    ])
   }
 
-  return folder;
+  return folder
 }
 
 /**
  * Clear all posts from a program (after archiving)
  */
 function clearProgramPosts(programNr) {
-  const ui = SpreadsheetApp.getUi();
+  const ui = SpreadsheetApp.getUi()
 
   const confirm = ui.alert(
-    'Rensa program?',
-    `Detta kommer att TA BORT ALLA poster från Program ${programNr}.\n\n` +
-    'Se till att du har arkiverat programmet först!\n\n' +
-    'Denna åtgärd kan INTE ångras.',
-    ui.ButtonSet.YES_NO
-  );
+    'Clear programme?',
+    `This will DELETE ALL posts from Programme ${programNr}.\n\n` +
+      'Make sure you have archived the programme first!\n\n' +
+      'This action CANNOT be undone.',
+    ui.ButtonSet.YES_NO,
+  )
 
   if (confirm !== ui.Button.YES) {
-    return { success: false, cancelled: true };
+    return { success: false, cancelled: true }
   }
 
-  const postsSheet = getDbSheet_(DB.POSTS);
-  const data = postsSheet.getDataRange().getValues();
+  const postsSheet = getDbSheet_(DB.POSTS)
+  const data = postsSheet.getDataRange().getValues()
 
   // Find rows to delete (from bottom up to preserve row indices)
-  const rowsToDelete = [];
+  const rowsToDelete = []
   for (let i = data.length - 1; i >= 1; i--) {
     if (data[i][POST_SCHEMA.PROGRAM_NR] === programNr) {
-      rowsToDelete.push(i + 1);  // 1-based
+      rowsToDelete.push(i + 1) // 1-based
     }
   }
 
   // Delete rows
-  rowsToDelete.forEach(rowIndex => {
-    postsSheet.deleteRow(rowIndex);
-  });
+  rowsToDelete.forEach((rowIndex) => {
+    postsSheet.deleteRow(rowIndex)
+  })
 
   // Audit log
   logAudit_({
@@ -1191,93 +1201,96 @@ function clearProgramPosts(programNr) {
     entity_type: 'program',
     entity_id: String(programNr),
     old_value: `${rowsToDelete.length} posts`,
-    source: 'ui'
-  });
+    source: 'ui',
+  })
 
   // Reset program metadata (optional - keep location)
-  const programsSheet = getDbSheet_(DB.PROGRAMS);
-  const programsData = programsSheet.getDataRange().getValues();
+  const programsSheet = getDbSheet_(DB.PROGRAMS)
+  const programsData = programsSheet.getDataRange().getValues()
 
   for (let i = 1; i < programsData.length; i++) {
     if (programsData[i][0] === programNr) {
-      const timestamp = getTimestamp_();
+      const timestamp = getTimestamp_()
       // Clear production/broadcast dates, theme, etc but keep location and target duration
-      programsSheet.getRange(i + 1, 3).setValue('');  // production_date
-      programsSheet.getRange(i + 1, 4).setValue('');  // broadcast_date
-      programsSheet.getRange(i + 1, 5).setValue('');  // theme
-      programsSheet.getRange(i + 1, 9).setValue('');  // notes
-      programsSheet.getRange(i + 1, 11).setValue(timestamp);  // modified
-      break;
+      programsSheet.getRange(i + 1, 3).setValue('') // production_date
+      programsSheet.getRange(i + 1, 4).setValue('') // broadcast_date
+      programsSheet.getRange(i + 1, 5).setValue('') // theme
+      programsSheet.getRange(i + 1, 9).setValue('') // notes
+      programsSheet.getRange(i + 1, 11).setValue(timestamp) // modified
+      break
     }
   }
 
-  ui.alert('Program rensat', `${rowsToDelete.length} poster har tagits bort från Program ${programNr}.`, ui.ButtonSet.OK);
+  ui.alert(
+    'Programme cleared',
+    `${rowsToDelete.length} posts have been removed from Programme ${programNr}.`,
+    ui.ButtonSet.OK,
+  )
 
-  return { success: true, deleted_count: rowsToDelete.length };
+  return { success: true, deleted_count: rowsToDelete.length }
 }
 
 /**
  * Archive and clear a program (combined operation)
  */
 function archiveAndClearProgram(programNr) {
-  const ui = SpreadsheetApp.getUi();
+  const ui = SpreadsheetApp.getUi()
 
   const confirm = ui.alert(
-    `Arkivera och rensa Program ${programNr}?`,
-    `Detta kommer att:\n\n` +
-    `1. Spara en arkivkopia till Google Drive\n` +
-    `2. Ta bort alla poster från programmet\n\n` +
-    `Programmet blir sedan redo för en ny produktion.`,
-    ui.ButtonSet.YES_NO
-  );
+    `Archive and clear Programme ${programNr}?`,
+    `This will:\n\n` +
+      `1. Save an archive copy to Google Drive\n` +
+      `2. Remove all posts from the programme\n\n` +
+      `The programme will then be ready for a new production.`,
+    ui.ButtonSet.YES_NO,
+  )
 
   if (confirm !== ui.Button.YES) {
-    return;
+    return
   }
 
   try {
     // First archive
-    const archiveResult = archiveProgram(programNr);
+    const archiveResult = archiveProgram(programNr)
 
     if (!archiveResult.success) {
-      ui.alert('Arkivering misslyckades', archiveResult.error || 'Okänt fel', ui.ButtonSet.OK);
-      return;
+      ui.alert('Archiving failed', archiveResult.error || 'Unknown error', ui.ButtonSet.OK)
+      return
     }
 
     // Then clear (without additional confirmation)
-    const postsSheet = getDbSheet_(DB.POSTS);
-    const data = postsSheet.getDataRange().getValues();
+    const postsSheet = getDbSheet_(DB.POSTS)
+    const data = postsSheet.getDataRange().getValues()
 
-    const rowsToDelete = [];
+    const rowsToDelete = []
     for (let i = data.length - 1; i >= 1; i--) {
       if (data[i][POST_SCHEMA.PROGRAM_NR] === programNr) {
-        rowsToDelete.push(i + 1);
+        rowsToDelete.push(i + 1)
       }
     }
 
-    rowsToDelete.forEach(rowIndex => {
-      postsSheet.deleteRow(rowIndex);
-    });
+    rowsToDelete.forEach((rowIndex) => {
+      postsSheet.deleteRow(rowIndex)
+    })
 
     logAudit_({
       action: 'archive_and_clear',
       entity_type: 'program',
       entity_id: String(programNr),
       new_value: archiveResult.filename,
-      source: 'ui'
-    });
+      source: 'ui',
+    })
 
     ui.alert(
-      'Klart!',
-      `Program ${programNr} har arkiverats och rensats.\n\n` +
-      `Arkivfil: ${archiveResult.filename}\n` +
-      `Poster arkiverade: ${archiveResult.posts_count}\n\n` +
-      `Programmet är nu redo för en ny produktion.`,
-      ui.ButtonSet.OK
-    );
-
+      'Complete!',
+      `Programme ${programNr} has been archived and cleared.\n\n` +
+        `Archive file: ${archiveResult.filename}\n` +
+        `Posts archived: ${archiveResult.posts_count}\n\n` +
+        `The programme is now ready for a new production.`,
+      ui.ButtonSet.OK,
+    )
   } catch (error) {
-    ui.alert('Fel', error.message, ui.ButtonSet.OK);
+    ui.alert('Error', error.message, ui.ButtonSet.OK)
   }
 }
 
@@ -1289,33 +1302,33 @@ function archiveAndClearProgram(programNr) {
  * Create new person
  */
 function createPerson(personData) {
-  const sheet = getDbSheet_(DB.PEOPLE);
-  const timestamp = getTimestamp_();
-  
+  const sheet = getDbSheet_(DB.PEOPLE)
+  const timestamp = getTimestamp_()
+
   // Generate person_id
-  const personId = generateId_('P');
-  
+  const personId = generateId_('P')
+
   const row = [
     personId,
     personData.name || '',
     personData.roles || '',
     personData.contact || '',
-    personData.type || 'medverkande',
-    timestamp
-  ];
-  
-  sheet.appendRow(row);
-  Logger.log(`Created person: ${personId}`);
-  return personId;
+    personData.type || 'participant',
+    timestamp,
+  ]
+
+  sheet.appendRow(row)
+  Logger.log(`Created person: ${personId}`)
+  return personId
 }
 
 /**
  * Get all people
  */
 function getAllPeople_() {
-  const sheet = getDbSheet_(DB.PEOPLE);
-  const data = sheet.getDataRange().getValues();
-  return data.slice(1);  // Skip header
+  const sheet = getDbSheet_(DB.PEOPLE)
+  const data = sheet.getDataRange().getValues()
+  return data.slice(1) // Skip header
 }
 
 /**
@@ -1324,18 +1337,18 @@ function getAllPeople_() {
  * @returns {String} - Person name or original ID if not found
  */
 function getPersonNameById_(personId) {
-  if (!personId) return '';
+  if (!personId) return ''
 
-  const sheet = getDbSheet_(DB.PEOPLE);
-  const data = sheet.getDataRange().getValues();
+  const sheet = getDbSheet_(DB.PEOPLE)
+  const data = sheet.getDataRange().getValues()
 
   for (let i = 1; i < data.length; i++) {
     if (data[i][PERSON_SCHEMA.ID] === personId) {
-      return data[i][PERSON_SCHEMA.NAME];
+      return data[i][PERSON_SCHEMA.NAME]
     }
   }
 
-  return personId;  // Return ID if not found
+  return personId // Return ID if not found
 }
 
 /**
@@ -1344,12 +1357,15 @@ function getPersonNameById_(personId) {
  * @returns {String} - Comma-separated names
  */
 function convertPeopleIdsToNames(peopleIds) {
-  if (!peopleIds) return '';
+  if (!peopleIds) return ''
 
-  const ids = peopleIds.split(',').map(id => id.trim()).filter(id => id);
-  const names = ids.map(id => getPersonNameById_(id));
+  const ids = peopleIds
+    .split(',')
+    .map((id) => id.trim())
+    .filter((id) => id)
+  const names = ids.map((id) => getPersonNameById_(id))
 
-  return names.join(', ');
+  return names.join(', ')
 }
 
 /**
@@ -1359,7 +1375,7 @@ function convertPeopleIdsToNames(peopleIds) {
  * @customfunction
  */
 function PEOPLE_NAMES(peopleIds) {
-  return convertPeopleIdsToNames(peopleIds);
+  return convertPeopleIdsToNames(peopleIds)
 }
 
 // ============================================================================
@@ -1370,11 +1386,11 @@ function PEOPLE_NAMES(peopleIds) {
  * Get post type by key
  */
 function getPostTypeByKey_(typeKey) {
-  const sheet = getDbSheet_(DB.POST_TYPES);
-  const data = sheet.getDataRange().getValues();
-  
+  const sheet = getDbSheet_(DB.POST_TYPES)
+  const data = sheet.getDataRange().getValues()
+
   for (let i = 1; i < data.length; i++) {
-    const row = data[i];
+    const row = data[i]
     if (row[POST_TYPE_SCHEMA.TYPE_KEY] === typeKey) {
       return {
         type_key: row[POST_TYPE_SCHEMA.TYPE_KEY],
@@ -1387,21 +1403,21 @@ function getPostTypeByKey_(typeKey) {
         category: row[POST_TYPE_SCHEMA.CATEGORY],
         bg_colour: row[POST_TYPE_SCHEMA.BG_COLOUR],
         row_height: row[POST_TYPE_SCHEMA.ROW_HEIGHT],
-        description: row[POST_TYPE_SCHEMA.DESCRIPTION]
-      };
+        description: row[POST_TYPE_SCHEMA.DESCRIPTION],
+      }
     }
   }
-  
-  return null;
+
+  return null
 }
 
 /**
  * Get all post types
  */
 function getAllPostTypes_() {
-  const sheet = getDbSheet_(DB.POST_TYPES);
-  const data = sheet.getDataRange().getValues();
-  return data.slice(1);  // Skip header
+  const sheet = getDbSheet_(DB.POST_TYPES)
+  const data = sheet.getDataRange().getValues()
+  return data.slice(1) // Skip header
 }
 
 // ============================================================================
@@ -1412,31 +1428,31 @@ function getAllPostTypes_() {
  * Hide all database sheets
  */
 function hideDbSheets_() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  
-  Object.values(DB).forEach(sheetName => {
-    const sheet = ss.getSheetByName(sheetName);
+  const ss = SpreadsheetApp.getActiveSpreadsheet()
+
+  Object.values(DB).forEach((sheetName) => {
+    const sheet = ss.getSheetByName(sheetName)
     if (sheet) {
-      sheet.hideSheet();
-      sheet.setTabColor(COLOURS.DB_SHEET_TAB);
+      sheet.hideSheet()
+      sheet.setTabColor(COLOURS.DB_SHEET_TAB)
     }
-  });
-  
-  Logger.log('Hidden all database sheets');
+  })
+
+  Logger.log('Hidden all database sheets')
 }
 
 /**
  * Show all database sheets (for debugging/manual editing)
  */
 function showDbSheets() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  
-  Object.values(DB).forEach(sheetName => {
-    const sheet = ss.getSheetByName(sheetName);
+  const ss = SpreadsheetApp.getActiveSpreadsheet()
+
+  Object.values(DB).forEach((sheetName) => {
+    const sheet = ss.getSheetByName(sheetName)
     if (sheet && sheet.isSheetHidden()) {
-      sheet.showSheet();
+      sheet.showSheet()
     }
-  });
-  
-  SpreadsheetApp.getUi().alert('Database sheets are now visible');
+  })
+
+  SpreadsheetApp.getUi().alert('Database sheets are now visible')
 }

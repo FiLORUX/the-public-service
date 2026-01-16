@@ -5,6 +5,11 @@ compatibility_date = "2024-01-01"
 [vars]
 ENVIRONMENT = "production"
 
+# CORS: Comma-separated list of allowed origins
+# Example: "https://studio.example.com,https://admin.example.com"
+# If not set, defaults to localhost origins only (restrictive)
+ALLOWED_ORIGINS = "https://studio.thepublicservice.se,https://admin.thepublicservice.se"
+
 # Secrets (set via `wrangler secret put`)
 # SUPABASE_URL
 # SUPABASE_SERVICE_KEY

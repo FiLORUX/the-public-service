@@ -1,0 +1,117 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Determine which projects have changed
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      worker: ${{ steps.filter.outputs.worker }}
+      studio-app: ${{ steps.filter.outputs.studio-app }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            worker:
+              - 'worker/**'
+            studio-app:
+              - 'studio-app/**'
+
+  # Lint and typecheck
+  check:
+    needs: changes
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+          - name: worker
+            path: worker
+          - name: studio-app
+            path: studio-app
+    name: Check ${{ matrix.project.name }}
+    if: ${{ needs.changes.outputs.worker == 'true' || needs.changes.outputs.studio-app == 'true' || github.event_name == 'push' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        working-directory: ${{ matrix.project.path }}
+        run: npm install
+
+      - name: Typecheck
+        working-directory: ${{ matrix.project.path }}
+        run: npm run typecheck --if-present
+
+      - name: Lint
+        working-directory: ${{ matrix.project.path }}
+        run: npm run lint --if-present
+
+  # Build
+  build:
+    needs: [changes, check]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+          - name: worker
+            path: worker
+          - name: studio-app
+            path: studio-app
+    name: Build ${{ matrix.project.name }}
+    if: ${{ needs.changes.outputs.worker == 'true' || needs.changes.outputs.studio-app == 'true' || github.event_name == 'push' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        working-directory: ${{ matrix.project.path }}
+        run: npm install
+
+      - name: Build
+        working-directory: ${{ matrix.project.path }}
+        run: npm run build --if-present
+
+      - name: Upload build artifacts
+        if: matrix.project.name == 'studio-app'
+        uses: actions/upload-artifact@v4
+        with:
+          name: studio-app-dist
+          path: studio-app/dist
+          retention-days: 7
+
+  # Summary job for branch protection
+  ci-success:
+    needs: [check, build]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check all jobs passed
+        run: |
+          if [[ "${{ needs.check.result }}" == "failure" || "${{ needs.build.result }}" == "failure" ]]; then
+            echo "One or more jobs failed"
+            exit 1
+          fi
+          echo "All jobs passed successfully"

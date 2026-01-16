@@ -1,6 +1,6 @@
 /**
  * TRIGGERS & EVENT HANDLERS
- * 
+ *
  * Handles spreadsheet events (onEdit, onChange, onOpen)
  * Maintains data integrity and sync between views and database
  */
@@ -15,23 +15,23 @@
  */
 function installTriggers() {
   // Remove existing triggers first
-  const triggers = ScriptApp.getProjectTriggers();
-  triggers.forEach(trigger => ScriptApp.deleteTrigger(trigger));
-  
+  const triggers = ScriptApp.getProjectTriggers()
+  triggers.forEach((trigger) => ScriptApp.deleteTrigger(trigger))
+
   // OnOpen trigger (for custom menu)
   ScriptApp.newTrigger('onOpen')
     .forSpreadsheet(SpreadsheetApp.getActiveSpreadsheet())
     .onOpen()
-    .create();
-  
+    .create()
+
   // OnEdit trigger (for data validation and sync)
   ScriptApp.newTrigger('onEditTrigger')
     .forSpreadsheet(SpreadsheetApp.getActiveSpreadsheet())
     .onEdit()
-    .create();
-  
-  Logger.log('All triggers installed');
-  SpreadsheetApp.getUi().alert('Triggers installed successfully');
+    .create()
+
+  Logger.log('All triggers installed')
+  SpreadsheetApp.getUi().alert('Triggers installed successfully')
 }
 
 // ============================================================================
@@ -43,32 +43,31 @@ function installTriggers() {
  * This is called every time a cell is edited
  */
 function onEditTrigger(e) {
-  if (!e || !e.range) return;
-  
+  if (!e || !e.range) return
+
   try {
-    const sheet = e.range.getSheet();
-    const sheetName = sheet.getName();
-    const row = e.range.getRow();
-    const col = e.range.getColumn();
-    
+    const sheet = e.range.getSheet()
+    const sheetName = sheet.getName()
+    const row = e.range.getRow()
+    const col = e.range.getColumn()
+
     // Only handle edits in view sheets, not database sheets
-    if (sheetName.startsWith('_DB_')) return;
-    
+    if (sheetName.startsWith('_DB_')) return
+
     // Programme views (Program 1-4)
     if (sheetName.match(/^Program \d$/)) {
-      handleProgramViewEdit_(e, sheet, row, col);
-      return;
+      handleProgramViewEdit_(e, sheet, row, col)
+      return
     }
-    
+
     // Schedule view (read-only, but just in case)
     if (sheetName === VIEW.SCHEDULE) {
       // Schedule is read-only (QUERY formula), but user might try to edit
       // We could show a warning here if needed
-      return;
+      return
     }
-    
   } catch (error) {
-    Logger.log(`onEditTrigger error: ${error.message}`);
+    Logger.log(`onEditTrigger error: ${error.message}`)
     // Don't alert user for every edit error, just log it
   }
 }
@@ -82,65 +81,64 @@ function onEditTrigger(e) {
  */
 function handleProgramViewEdit_(e, sheet, row, col) {
   // Ignore header rows
-  if (row < VIEW_CONFIG.DATA_START_ROW) return;
-  
-  const programNr = parseInt(sheet.getName().match(/\d/)[0], 10);
-  
+  if (row < VIEW_CONFIG.DATA_START_ROW) return
+
+  const programNr = parseInt(sheet.getName().match(/\d/)[0], 10)
+
   // Get post ID from column A
-  const postId = sheet.getRange(row, 1).getValue();
-  if (!postId || !postId.match(/^P\d:\d+$/)) return;
-  
+  const postId = sheet.getRange(row, 1).getValue()
+  if (!postId || !postId.match(/^P\d:\d+$/)) return
+
   // Determine which column was edited and update database accordingly
   const columnMap = {
-    2: 'type',           // Typ
-    3: 'title',          // Innehåll
-    4: 'people_ids',     // Medverkande (needs special handling)
-    5: 'duration',       // Dur (needs conversion)
-    7: 'location',       // Plats
-    8: 'recording_day',  // Dag
-    9: 'status',         // Status
-    10: 'notes'          // Anteckningar
-  };
-  
-  const dbField = columnMap[col];
-  if (!dbField) return;  // Column not mapped to database
-  
-  let newValue = e.value || e.range.getValue();
-  
+    2: 'type', // Typ
+    3: 'title', // Innehåll
+    4: 'people_ids', // Medverkande (needs special handling)
+    5: 'duration', // Dur (needs conversion)
+    7: 'location', // Plats
+    8: 'recording_day', // Dag
+    9: 'status', // Status
+    10: 'notes', // Anteckningar
+  }
+
+  const dbField = columnMap[col]
+  if (!dbField) return // Column not mapped to database
+
+  let newValue = e.value || e.range.getValue()
+
   // Special handling for specific fields
   if (dbField === 'duration') {
     // Convert time format to seconds
-    newValue = parseDurationToSeconds_(newValue);
+    newValue = parseDurationToSeconds_(newValue)
   }
-  
+
   if (dbField === 'people_ids') {
     // If user enters names, convert to IDs
-    newValue = convertPeopleNamesToIds_(newValue);
+    newValue = convertPeopleNamesToIds_(newValue)
   }
-  
+
   if (dbField === 'recording_day') {
     // Convert display name to key
-    const dayMatch = Object.values(RECORDING_DAYS).find(d => d.display === newValue);
-    if (dayMatch) newValue = dayMatch.key;
+    const dayMatch = Object.values(RECORDING_DAYS).find((d) => d.display === newValue)
+    if (dayMatch) newValue = dayMatch.key
   }
-  
+
   if (dbField === 'status') {
     // Convert display name to key
-    const statusMatch = Object.values(POST_STATUS).find(s => s.display === newValue);
-    if (statusMatch) newValue = statusMatch.key;
+    const statusMatch = Object.values(POST_STATUS).find((s) => s.display === newValue)
+    if (statusMatch) newValue = statusMatch.key
   }
-  
+
   // Update database
   try {
-    const updates = {};
-    updates[dbField] = newValue;
-    updatePost(postId, updates, 'ui');
+    const updates = {}
+    updates[dbField] = newValue
+    updatePost(postId, updates, 'ui')
 
     // Rolling time is calculated via ARRAYFORMULA in the view - no manual recalc needed
-
   } catch (error) {
-    Logger.log(`Failed to update post ${postId}: ${error.message}`);
-    e.range.setNote(`Update failed: ${error.message}`);
+    Logger.log(`Failed to update post ${postId}: ${error.message}`)
+    e.range.setNote(`Update failed: ${error.message}`)
   }
 }
 
@@ -149,23 +147,26 @@ function handleProgramViewEdit_(e, sheet, row, col) {
  * Creates new people if they don't exist
  */
 function convertPeopleNamesToIds_(namesString) {
-  if (!namesString) return '';
-  
-  const names = namesString.split(',').map(n => n.trim()).filter(n => n);
-  const ids = [];
-  
-  names.forEach(name => {
-    const existing = findPersonByName_(name);
+  if (!namesString) return ''
+
+  const names = namesString
+    .split(',')
+    .map((n) => n.trim())
+    .filter((n) => n)
+  const ids = []
+
+  names.forEach((name) => {
+    const existing = findPersonByName_(name)
     if (existing) {
-      ids.push(existing[PERSON_SCHEMA.ID]);
+      ids.push(existing[PERSON_SCHEMA.ID])
     } else {
       // Create new person
-      const newId = createPerson({ name: name });
-      ids.push(newId);
+      const newId = createPerson({ name: name })
+      ids.push(newId)
     }
-  });
-  
-  return ids.join(',');
+  })
+
+  return ids.join(',')
 }
 
 // ============================================================================
@@ -181,48 +182,56 @@ function convertPeopleNamesToIds_(namesString) {
  */
 function highlightCurrentPost_(postId) {
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const ss = SpreadsheetApp.getActiveSpreadsheet()
 
     // Parse post_id to get program number
-    const match = postId.match(/^P(\d+):(\d+)$/);
-    if (!match) return;
+    const match = postId.match(/^P(\d+):(\d+)$/)
+    if (!match) return
 
-    const programNr = parseInt(match[1], 10);
-    const sheetName = `Program ${programNr}`;
-    const sheet = ss.getSheetByName(sheetName);
+    const programNr = parseInt(match[1], 10)
+    const sheetName = `Program ${programNr}`
+    const sheet = ss.getSheetByName(sheetName)
 
-    if (!sheet) return;
+    if (!sheet) return
 
     // Find the row with this post
-    const data = sheet.getDataRange().getValues();
-    let targetRow = -1;
+    const data = sheet.getDataRange().getValues()
+    let targetRow = -1
 
     for (let i = VIEW_CONFIG.DATA_START_ROW - 1; i < data.length; i++) {
       if (data[i][0] === postId) {
-        targetRow = i + 1;  // 1-based
-        break;
+        targetRow = i + 1 // 1-based
+        break
       }
     }
 
-    if (targetRow === -1) return;
+    if (targetRow === -1) return
 
     // Clear any previous "current" highlighting
-    clearCurrentHighlight_(sheet);
+    clearCurrentHighlight_(sheet)
 
     // Apply highlight to current row
-    const rowRange = sheet.getRange(targetRow, 1, 1, 10);
-    rowRange.setBorder(true, true, true, true, false, false, '#FF5722', SpreadsheetApp.BorderStyle.SOLID_THICK);
+    const rowRange = sheet.getRange(targetRow, 1, 1, 10)
+    rowRange.setBorder(
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      '#FF5722',
+      SpreadsheetApp.BorderStyle.SOLID_THICK,
+    )
 
     // Store current post in document properties for reference
-    const docProps = PropertiesService.getDocumentProperties();
-    docProps.setProperty('CURRENT_POST', postId);
-    docProps.setProperty('CURRENT_POST_SHEET', sheetName);
-    docProps.setProperty('CURRENT_POST_ROW', String(targetRow));
+    const docProps = PropertiesService.getDocumentProperties()
+    docProps.setProperty('CURRENT_POST', postId)
+    docProps.setProperty('CURRENT_POST_SHEET', sheetName)
+    docProps.setProperty('CURRENT_POST_ROW', String(targetRow))
 
-    Logger.log(`Highlighted current post: ${postId} at row ${targetRow}`);
-
+    Logger.log(`Highlighted current post: ${postId} at row ${targetRow}`)
   } catch (error) {
-    Logger.log(`Highlight error: ${error.message}`);
+    Logger.log(`Highlight error: ${error.message}`)
   }
 }
 
@@ -231,19 +240,19 @@ function highlightCurrentPost_(postId) {
  */
 function clearCurrentHighlight_(sheet) {
   try {
-    const docProps = PropertiesService.getDocumentProperties();
-    const prevRow = docProps.getProperty('CURRENT_POST_ROW');
-    const prevSheet = docProps.getProperty('CURRENT_POST_SHEET');
+    const docProps = PropertiesService.getDocumentProperties()
+    const prevRow = docProps.getProperty('CURRENT_POST_ROW')
+    const prevSheet = docProps.getProperty('CURRENT_POST_SHEET')
 
     if (prevRow && prevSheet === sheet.getName()) {
-      const rowNum = parseInt(prevRow, 10);
+      const rowNum = parseInt(prevRow, 10)
       if (rowNum >= VIEW_CONFIG.DATA_START_ROW) {
-        const rowRange = sheet.getRange(rowNum, 1, 1, 10);
-        rowRange.setBorder(false, false, false, false, false, false);
+        const rowRange = sheet.getRange(rowNum, 1, 1, 10)
+        rowRange.setBorder(false, false, false, false, false, false)
       }
     }
   } catch (error) {
-    Logger.log(`Clear highlight error: ${error.message}`);
+    Logger.log(`Clear highlight error: ${error.message}`)
   }
 }
 
@@ -252,30 +261,29 @@ function clearCurrentHighlight_(sheet) {
  */
 function clearAllCurrentHighlights_() {
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const docProps = PropertiesService.getDocumentProperties();
+    const ss = SpreadsheetApp.getActiveSpreadsheet()
+    const docProps = PropertiesService.getDocumentProperties()
 
-    const prevSheet = docProps.getProperty('CURRENT_POST_SHEET');
-    const prevRow = docProps.getProperty('CURRENT_POST_ROW');
+    const prevSheet = docProps.getProperty('CURRENT_POST_SHEET')
+    const prevRow = docProps.getProperty('CURRENT_POST_ROW')
 
     if (prevSheet && prevRow) {
-      const sheet = ss.getSheetByName(prevSheet);
+      const sheet = ss.getSheetByName(prevSheet)
       if (sheet) {
-        const rowNum = parseInt(prevRow, 10);
+        const rowNum = parseInt(prevRow, 10)
         if (rowNum >= VIEW_CONFIG.DATA_START_ROW) {
-          const rowRange = sheet.getRange(rowNum, 1, 1, 10);
-          rowRange.setBorder(false, false, false, false, false, false);
+          const rowRange = sheet.getRange(rowNum, 1, 1, 10)
+          rowRange.setBorder(false, false, false, false, false, false)
         }
       }
     }
 
     // Clear properties
-    docProps.deleteProperty('CURRENT_POST');
-    docProps.deleteProperty('CURRENT_POST_SHEET');
-    docProps.deleteProperty('CURRENT_POST_ROW');
-
+    docProps.deleteProperty('CURRENT_POST')
+    docProps.deleteProperty('CURRENT_POST_SHEET')
+    docProps.deleteProperty('CURRENT_POST_ROW')
   } catch (error) {
-    Logger.log(`Clear all highlights error: ${error.message}`);
+    Logger.log(`Clear all highlights error: ${error.message}`)
   }
 }
 
@@ -283,48 +291,48 @@ function clearAllCurrentHighlights_() {
  * Get the currently recording post info
  */
 function getCurrentPostInfo() {
-  const docProps = PropertiesService.getDocumentProperties();
-  const postId = docProps.getProperty('CURRENT_POST');
+  const docProps = PropertiesService.getDocumentProperties()
+  const postId = docProps.getProperty('CURRENT_POST')
 
   if (!postId) {
-    return { hasCurrentPost: false };
+    return { hasCurrentPost: false }
   }
 
   return {
     hasCurrentPost: true,
     post_id: postId,
     sheet: docProps.getProperty('CURRENT_POST_SHEET'),
-    row: parseInt(docProps.getProperty('CURRENT_POST_ROW'), 10)
-  };
+    row: parseInt(docProps.getProperty('CURRENT_POST_ROW'), 10),
+  }
 }
 
 /**
  * Navigate to and highlight the current recording post
  */
 function goToCurrentPost() {
-  const ui = SpreadsheetApp.getUi();
-  const info = getCurrentPostInfo();
+  const ui = SpreadsheetApp.getUi()
+  const info = getCurrentPostInfo()
 
   if (!info.hasCurrentPost) {
-    ui.alert('Ingen aktiv inspelning', 'Det finns ingen post som spelar in just nu.', ui.ButtonSet.OK);
-    return;
+    ui.alert('No active recording', 'There is no post currently being recorded.', ui.ButtonSet.OK)
+    return
   }
 
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(info.sheet);
+  const ss = SpreadsheetApp.getActiveSpreadsheet()
+  const sheet = ss.getSheetByName(info.sheet)
 
   if (!sheet) {
-    ui.alert('Fel', `Kunde inte hitta bladet ${info.sheet}`, ui.ButtonSet.OK);
-    return;
+    ui.alert('Error', `Could not find sheet ${info.sheet}`, ui.ButtonSet.OK)
+    return
   }
 
   // Activate sheet and select the row
-  sheet.activate();
-  const range = sheet.getRange(info.row, 1, 1, 10);
-  sheet.setActiveRange(range);
+  sheet.activate()
+  const range = sheet.getRange(info.row, 1, 1, 10)
+  sheet.setActiveRange(range)
 
   // Ensure visible
-  SpreadsheetApp.flush();
+  SpreadsheetApp.flush()
 }
 
 // ============================================================================
@@ -336,22 +344,21 @@ function goToCurrentPost() {
  * This is more heavyweight, so only use for specific cases
  */
 function onChangeTrigger(e) {
-  if (!e) return;
-  
+  if (!e) return
+
   try {
     // Detect if database sheets were modified
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    
+    const ss = SpreadsheetApp.getActiveSpreadsheet()
+
     // If _DB_Posts was modified, refresh all programme views
-    const dbPosts = ss.getSheetByName(DB.POSTS);
+    const dbPosts = ss.getSheetByName(DB.POSTS)
     if (dbPosts && e.source.getSheetId() === dbPosts.getSheetId()) {
-      Logger.log('Database posts modified, refreshing views');
+      Logger.log('Database posts modified, refreshing views')
       // Refresh all views (expensive, so only do if really needed)
       // For now, just log it
     }
-    
   } catch (error) {
-    Logger.log(`onChangeTrigger error: ${error.message}`);
+    Logger.log(`onChangeTrigger error: ${error.message}`)
   }
 }
 
@@ -364,7 +371,7 @@ function onChangeTrigger(e) {
  * Runs automatically when time-based triggers are installed
  */
 function dailyBackup() {
-  Logger.log('Automated backup triggered at ' + new Date());
+  Logger.log('Automated backup triggered at ' + new Date())
 
   try {
     // Gather all database data
@@ -377,33 +384,32 @@ function dailyBackup() {
       programs: getDbSheet_(DB.PROGRAMS).getDataRange().getValues(),
       post_types: getDbSheet_(DB.POST_TYPES).getDataRange().getValues(),
       log: getDbSheet_(DB.LOG).getDataRange().getValues(),
-      settings: getDbSheet_(DB.SETTINGS).getDataRange().getValues()
-    };
+      settings: getDbSheet_(DB.SETTINGS).getDataRange().getValues(),
+    }
 
-    const json = JSON.stringify(dbData, null, 2);
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
-    const filename = `gudstjanst_backup_${timestamp}.json`;
+    const json = JSON.stringify(dbData, null, 2)
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19)
+    const filename = `churchservice_backup_${timestamp}.json`
 
     // Get or create backup folder in Google Drive
-    const folderId = getOrCreateBackupFolder_();
-    const folder = DriveApp.getFolderById(folderId);
+    const folderId = getOrCreateBackupFolder_()
+    const folder = DriveApp.getFolderById(folderId)
 
     // Create backup file
-    const file = folder.createFile(filename, json, MimeType.PLAIN_TEXT);
+    const file = folder.createFile(filename, json, MimeType.PLAIN_TEXT)
 
     // Clean up old backups (keep last 30)
-    cleanupOldBackups_(folder, 30);
+    cleanupOldBackups_(folder, 30)
 
-    Logger.log(`Backup created: ${filename} (${file.getId()})`);
+    Logger.log(`Backup created: ${filename} (${file.getId()})`)
 
     // Update settings with last backup time
-    updateBackupTimestamp_();
+    updateBackupTimestamp_()
 
-    return { success: true, filename: filename, fileId: file.getId() };
-
+    return { success: true, filename: filename, fileId: file.getId() }
   } catch (error) {
-    Logger.log(`Backup error: ${error.message}\n${error.stack}`);
-    return { success: false, error: error.message };
+    Logger.log(`Backup error: ${error.message}\n${error.stack}`)
+    return { success: false, error: error.message }
   }
 }
 
@@ -411,19 +417,19 @@ function dailyBackup() {
  * Get or create backup folder in Google Drive
  */
 function getOrCreateBackupFolder_() {
-  const folderName = 'Gudstjänst_Backups';
+  const folderName = 'ChurchService_Backups'
 
   // Check if folder ID is stored in settings
-  const settingsSheet = getDbSheet_(DB.SETTINGS);
-  const settingsData = settingsSheet.getDataRange().getValues();
+  const settingsSheet = getDbSheet_(DB.SETTINGS)
+  const settingsData = settingsSheet.getDataRange().getValues()
 
   for (let i = 1; i < settingsData.length; i++) {
     if (settingsData[i][0] === 'backup_folder_id') {
-      const folderId = settingsData[i][1];
+      const folderId = settingsData[i][1]
       // Verify folder still exists
       try {
-        DriveApp.getFolderById(folderId);
-        return folderId;
+        DriveApp.getFolderById(folderId)
+        return folderId
       } catch (e) {
         // Folder doesn't exist, create new one
       }
@@ -431,40 +437,44 @@ function getOrCreateBackupFolder_() {
   }
 
   // Create new folder
-  const folder = DriveApp.createFolder(folderName);
-  const folderId = folder.getId();
+  const folder = DriveApp.createFolder(folderName)
+  const folderId = folder.getId()
 
   // Store folder ID in settings
-  settingsSheet.appendRow(['backup_folder_id', folderId, 'Google Drive folder for automatic backups']);
+  settingsSheet.appendRow([
+    'backup_folder_id',
+    folderId,
+    'Google Drive folder for automatic backups',
+  ])
 
-  Logger.log(`Created backup folder: ${folderName} (${folderId})`);
-  return folderId;
+  Logger.log(`Created backup folder: ${folderName} (${folderId})`)
+  return folderId
 }
 
 /**
  * Clean up old backup files, keeping the most recent N
  */
 function cleanupOldBackups_(folder, keepCount) {
-  const files = folder.getFilesByType(MimeType.PLAIN_TEXT);
-  const fileList = [];
+  const files = folder.getFilesByType(MimeType.PLAIN_TEXT)
+  const fileList = []
 
   while (files.hasNext()) {
-    const file = files.next();
-    if (file.getName().startsWith('gudstjanst_backup_')) {
+    const file = files.next()
+    if (file.getName().startsWith('churchservice_backup_')) {
       fileList.push({
         file: file,
-        created: file.getDateCreated()
-      });
+        created: file.getDateCreated(),
+      })
     }
   }
 
   // Sort by date (newest first)
-  fileList.sort((a, b) => b.created - a.created);
+  fileList.sort((a, b) => b.created - a.created)
 
   // Delete files beyond keepCount
   for (let i = keepCount; i < fileList.length; i++) {
-    Logger.log(`Deleting old backup: ${fileList[i].file.getName()}`);
-    fileList[i].file.setTrashed(true);
+    Logger.log(`Deleting old backup: ${fileList[i].file.getName()}`)
+    fileList[i].file.setTrashed(true)
   }
 }
 
@@ -472,18 +482,18 @@ function cleanupOldBackups_(folder, keepCount) {
  * Update last backup timestamp in settings
  */
 function updateBackupTimestamp_() {
-  const sheet = getDbSheet_(DB.SETTINGS);
-  const data = sheet.getDataRange().getValues();
+  const sheet = getDbSheet_(DB.SETTINGS)
+  const data = sheet.getDataRange().getValues()
 
   for (let i = 1; i < data.length; i++) {
     if (data[i][0] === 'last_backup') {
-      sheet.getRange(i + 1, 2).setValue(getTimestamp_());
-      return;
+      sheet.getRange(i + 1, 2).setValue(getTimestamp_())
+      return
     }
   }
 
   // Add setting if not exists
-  sheet.appendRow(['last_backup', getTimestamp_(), 'Last automatic backup timestamp']);
+  sheet.appendRow(['last_backup', getTimestamp_(), 'Last automatic backup timestamp'])
 }
 
 /**
@@ -491,79 +501,79 @@ function updateBackupTimestamp_() {
  * Run this once to enable automatic backups (3 times per day)
  */
 function installBackupTriggers() {
-  const ui = SpreadsheetApp.getUi();
+  const ui = SpreadsheetApp.getUi()
 
   // Remove existing backup triggers
-  const triggers = ScriptApp.getProjectTriggers();
-  triggers.forEach(trigger => {
+  const triggers = ScriptApp.getProjectTriggers()
+  triggers.forEach((trigger) => {
     if (trigger.getHandlerFunction() === 'dailyBackup') {
-      ScriptApp.deleteTrigger(trigger);
+      ScriptApp.deleteTrigger(trigger)
     }
-  });
+  })
 
   // Create new triggers: 3 AM, 11 AM, 7 PM
-  ScriptApp.newTrigger('dailyBackup')
-    .timeBased()
-    .atHour(3)
-    .everyDays(1)
-    .create();
+  ScriptApp.newTrigger('dailyBackup').timeBased().atHour(3).everyDays(1).create()
 
-  ScriptApp.newTrigger('dailyBackup')
-    .timeBased()
-    .atHour(11)
-    .everyDays(1)
-    .create();
+  ScriptApp.newTrigger('dailyBackup').timeBased().atHour(11).everyDays(1).create()
 
-  ScriptApp.newTrigger('dailyBackup')
-    .timeBased()
-    .atHour(19)
-    .everyDays(1)
-    .create();
+  ScriptApp.newTrigger('dailyBackup').timeBased().atHour(19).everyDays(1).create()
 
-  Logger.log('Backup triggers installed: 03:00, 11:00, 19:00');
-  ui.alert('Backup-triggers installerade', 'Automatisk backup körs nu 3 gånger per dag:\n• 03:00\n• 11:00\n• 19:00\n\nBackup-filer sparas i Google Drive-mappen "Gudstjänst_Backups".', ui.ButtonSet.OK);
+  Logger.log('Backup triggers installed: 03:00, 11:00, 19:00')
+  ui.alert(
+    'Backup triggers installed',
+    'Automatic backup now runs 3 times per day:\n\u2022 03:00\n\u2022 11:00\n\u2022 19:00\n\nBackup files are saved in the Google Drive folder "ChurchService_Backups".',
+    ui.ButtonSet.OK,
+  )
 }
 
 /**
  * Remove all backup triggers
  */
 function removeBackupTriggers() {
-  const triggers = ScriptApp.getProjectTriggers();
-  let removed = 0;
+  const triggers = ScriptApp.getProjectTriggers()
+  let removed = 0
 
-  triggers.forEach(trigger => {
+  triggers.forEach((trigger) => {
     if (trigger.getHandlerFunction() === 'dailyBackup') {
-      ScriptApp.deleteTrigger(trigger);
-      removed++;
+      ScriptApp.deleteTrigger(trigger)
+      removed++
     }
-  });
+  })
 
-  const ui = SpreadsheetApp.getUi();
-  ui.alert('Backup-triggers borttagna', `${removed} backup-trigger(s) har tagits bort.\n\nAutomatisk backup är nu inaktiverad.`, ui.ButtonSet.OK);
+  const ui = SpreadsheetApp.getUi()
+  ui.alert(
+    'Backup triggers removed',
+    `${removed} backup trigger(s) have been removed.\n\nAutomatic backup is now disabled.`,
+    ui.ButtonSet.OK,
+  )
 }
 
 /**
  * Run manual backup now
  */
 function runBackupNow() {
-  const ui = SpreadsheetApp.getUi();
+  const ui = SpreadsheetApp.getUi()
 
   const confirm = ui.alert(
-    'Skapa backup nu?',
-    'Detta skapar en backup av hela databasen till Google Drive.',
-    ui.ButtonSet.YES_NO
-  );
+    'Create backup now?',
+    'This will create a backup of the entire database to Google Drive.',
+    ui.ButtonSet.YES_NO,
+  )
 
   if (confirm !== ui.Button.YES) {
-    return;
+    return
   }
 
-  const result = dailyBackup();
+  const result = dailyBackup()
 
   if (result.success) {
-    ui.alert('Backup klar!', `Backup skapad: ${result.filename}\n\nFilen finns i Google Drive-mappen "Gudstjänst_Backups".`, ui.ButtonSet.OK);
+    ui.alert(
+      'Backup complete!',
+      `Backup created: ${result.filename}\n\nThe file is in the Google Drive folder "ChurchService_Backups".`,
+      ui.ButtonSet.OK,
+    )
   } else {
-    ui.alert('Backup misslyckades', `Fel: ${result.error}`, ui.ButtonSet.OK);
+    ui.alert('Backup failed', `Error: ${result.error}`, ui.ButtonSet.OK)
   }
 }
 
@@ -571,7 +581,7 @@ function runBackupNow() {
  * Legacy function - kept for backwards compatibility
  */
 function installTimeTriggers() {
-  installBackupTriggers();
+  installBackupTriggers()
 }
 
 // ============================================================================
@@ -583,7 +593,7 @@ function installTimeTriggers() {
  * Set via: Extensions > Apps Script > Project Settings > Script Properties
  */
 function getApiSecret_() {
-  return PropertiesService.getScriptProperties().getProperty('API_SECRET');
+  return PropertiesService.getScriptProperties().getProperty('API_SECRET')
 }
 
 /**
@@ -591,39 +601,39 @@ function getApiSecret_() {
  * Checks for api_key in query params, POST body, or X-API-Key header
  */
 function validateApiAuth_(e, data) {
-  const props = PropertiesService.getScriptProperties();
-  const masterSecret = props.getProperty('API_SECRET');
+  const props = PropertiesService.getScriptProperties()
+  const masterSecret = props.getProperty('API_SECRET')
 
   // If no secret is set, allow all requests (for backwards compatibility)
   if (!masterSecret) {
-    return { valid: true, warning: 'API_SECRET not configured - API is unprotected' };
+    return { valid: true, warning: 'API_SECRET not configured - API is unprotected' }
   }
 
   // Check various places for the API key
   const providedKey =
-    e.parameter?.api_key ||           // Query param
-    data?.api_key ||                  // POST body
-    e.parameter?.key ||               // Alternative query param
-    null;
+    e.parameter?.api_key || // Query param
+    data?.api_key || // POST body
+    e.parameter?.key || // Alternative query param
+    null
 
   if (!providedKey) {
-    return { valid: false, error: 'API key required. Provide api_key parameter.' };
+    return { valid: false, error: 'API key required. Provide api_key parameter.' }
   }
 
   // Check against master key
   if (providedKey === masterSecret) {
-    return { valid: true, client: 'master' };
+    return { valid: true, client: 'master' }
   }
 
   // Check against client-specific keys
-  const clientKeys = JSON.parse(props.getProperty('CLIENT_API_KEYS') || '{}');
+  const clientKeys = JSON.parse(props.getProperty('CLIENT_API_KEYS') || '{}')
   for (const [clientName, clientKey] of Object.entries(clientKeys)) {
     if (clientKey === providedKey && !clientName.endsWith('_created')) {
-      return { valid: true, client: clientName };
+      return { valid: true, client: clientName }
     }
   }
 
-  return { valid: false, error: 'Invalid API key' };
+  return { valid: false, error: 'Invalid API key' }
 }
 
 /**
@@ -631,24 +641,24 @@ function validateApiAuth_(e, data) {
  * Returns true if request is allowed, false if rate limited
  */
 function checkRateLimit_(identifier) {
-  const cache = CacheService.getScriptCache();
-  const key = `rate_limit_${identifier}`;
+  const cache = CacheService.getScriptCache()
+  const key = `rate_limit_${identifier}`
 
-  const current = cache.get(key);
-  const count = current ? parseInt(current, 10) : 0;
+  const current = cache.get(key)
+  const count = current ? parseInt(current, 10) : 0
 
   if (count >= API_CONFIG.RATE_LIMIT) {
-    return { allowed: false, remaining: 0, resetIn: 60 };
+    return { allowed: false, remaining: 0, resetIn: 60 }
   }
 
   // Increment counter (expires after 60 seconds)
-  cache.put(key, String(count + 1), 60);
+  cache.put(key, String(count + 1), 60)
 
   return {
     allowed: true,
     remaining: API_CONFIG.RATE_LIMIT - count - 1,
-    count: count + 1
-  };
+    count: count + 1,
+  }
 }
 
 /**
@@ -656,7 +666,7 @@ function checkRateLimit_(identifier) {
  */
 function getClientIdentifier_(e) {
   // Use a combination of available identifiers
-  return e.parameter?.client_id || 'anonymous';
+  return e.parameter?.client_id || 'anonymous'
 }
 
 // ============================================================================
@@ -684,122 +694,139 @@ function getClientIdentifier_(e) {
  */
 function doPost(e) {
   // Set CORS headers for cross-origin requests
-  const output = ContentService.createTextOutput();
-  output.setMimeType(ContentService.MimeType.JSON);
+  const output = ContentService.createTextOutput()
+  output.setMimeType(ContentService.MimeType.JSON)
 
   try {
-    const data = JSON.parse(e.postData.contents);
+    const data = JSON.parse(e.postData.contents)
 
     // Check rate limiting
-    const clientId = getClientIdentifier_(e);
-    const rateCheck = checkRateLimit_(clientId);
+    const clientId = getClientIdentifier_(e)
+    const rateCheck = checkRateLimit_(clientId)
     if (!rateCheck.allowed) {
-      return output.setContent(JSON.stringify({
-        success: false,
-        error: 'Rate limit exceeded. Maximum 60 requests per minute.',
-        retry_after_seconds: rateCheck.resetIn
-      }));
+      return output.setContent(
+        JSON.stringify({
+          success: false,
+          error: 'Rate limit exceeded. Maximum 60 requests per minute.',
+          retry_after_seconds: rateCheck.resetIn,
+        }),
+      )
     }
 
     // Validate authentication
-    const auth = validateApiAuth_(e, data);
+    const auth = validateApiAuth_(e, data)
     if (!auth.valid) {
-      return output.setContent(JSON.stringify({
-        success: false,
-        error: auth.error
-      }));
+      return output.setContent(
+        JSON.stringify({
+          success: false,
+          error: auth.error,
+        }),
+      )
     }
 
-    const action = data.action;
+    const action = data.action
 
     // Log incoming request
-    Logger.log(`API POST: action=${action}, data=${JSON.stringify(data)}`);
+    Logger.log(`API POST: action=${action}, data=${JSON.stringify(data)}`)
 
-    let response = {};
+    let response = {}
 
     switch (action) {
       // Timecode logging
       case 'tc_in':
-        response = handleTcIn_(data);
-        break;
+        response = handleTcIn_(data)
+        break
       case 'tc_out':
-        response = handleTcOut_(data);
-        break;
+        response = handleTcOut_(data)
+        break
 
       // Status management
       case 'status_update':
-        response = handleStatusUpdate_(data);
-        break;
+        response = handleStatusUpdate_(data)
+        break
       case 'set_recording':
-        response = handleSetRecording_(data);
-        break;
+        response = handleSetRecording_(data)
+        break
       case 'mark_recorded':
-        response = handleMarkRecorded_(data);
-        break;
+        response = handleMarkRecorded_(data)
+        break
       case 'mark_approved':
-        response = handleMarkApproved_(data);
-        break;
+        response = handleMarkApproved_(data)
+        break
 
       // Data retrieval
       case 'get_posts':
-        response = handleGetPosts_(data);
-        break;
+        response = handleGetPosts_(data)
+        break
       case 'get_current':
-        response = handleGetCurrent_(data);
-        break;
+        response = handleGetCurrent_(data)
+        break
       case 'get_next':
-        response = handleGetNext_(data);
-        break;
+        response = handleGetNext_(data)
+        break
       case 'get_post':
-        response = handleGetPost_(data);
-        break;
+        response = handleGetPost_(data)
+        break
       case 'get_schedule':
-        response = handleGetSchedule_(data);
-        break;
+        response = handleGetSchedule_(data)
+        break
 
       // Clip management
       case 'next_clip':
-        response = handleNextClip_(data);
-        break;
+        response = handleNextClip_(data)
+        break
       case 'increment_clip':
-        response = handleIncrementClip_(data);
-        break;
+        response = handleIncrementClip_(data)
+        break
 
       // Batch operations (for efficiency with large datasets)
       case 'batch_update':
-        response = handleBatchUpdate_(data);
-        break;
+        response = handleBatchUpdate_(data)
+        break
       case 'batch_get':
-        response = handleBatchGet_(data);
-        break;
+        response = handleBatchGet_(data)
+        break
 
       // Cache management
       case 'invalidate_cache':
-        invalidateAllCaches();
-        response = { success: true, message: 'All caches invalidated' };
-        break;
+        invalidateAllCaches()
+        response = { success: true, message: 'All caches invalidated' }
+        break
 
       default:
         response = {
           success: false,
           error: `Unknown action: ${action}`,
           available_actions: [
-            'tc_in', 'tc_out', 'status_update', 'set_recording',
-            'mark_recorded', 'mark_approved', 'get_posts', 'get_current',
-            'get_next', 'get_post', 'get_schedule', 'next_clip', 'increment_clip',
-            'batch_update', 'batch_get', 'invalidate_cache'
-          ]
-        };
+            'tc_in',
+            'tc_out',
+            'status_update',
+            'set_recording',
+            'mark_recorded',
+            'mark_approved',
+            'get_posts',
+            'get_current',
+            'get_next',
+            'get_post',
+            'get_schedule',
+            'next_clip',
+            'increment_clip',
+            'batch_update',
+            'batch_get',
+            'invalidate_cache',
+          ],
+        }
     }
 
-    return output.setContent(JSON.stringify(response));
-
+    return output.setContent(JSON.stringify(response))
   } catch (error) {
-    Logger.log(`API error: ${error.message}\n${error.stack}`);
-    return output.setContent(JSON.stringify({
-      success: false,
-      error: error.message
-    }));
+    Logger.log(`API error: ${error.message}\n${error.stack}`)
+    return output.setContent(
+      JSON.stringify({
+        success: false,
+        error: error.message,
+      }),
+    )
   }
 }
 
@@ -813,38 +840,42 @@ function doPost(e) {
  * - day: Recording day (dag1, dag2, dag3)
  */
 function doGet(e) {
-  const output = ContentService.createTextOutput();
-  output.setMimeType(ContentService.MimeType.JSON);
+  const output = ContentService.createTextOutput()
+  output.setMimeType(ContentService.MimeType.JSON)
 
   try {
-    const params = e.parameter || {};
-    const action = params.action || 'status';
+    const params = e.parameter || {}
+    const action = params.action || 'status'
 
     // Check rate limiting
-    const clientId = getClientIdentifier_(e);
-    const rateCheck = checkRateLimit_(clientId);
+    const clientId = getClientIdentifier_(e)
+    const rateCheck = checkRateLimit_(clientId)
     if (!rateCheck.allowed) {
-      return output.setContent(JSON.stringify({
-        success: false,
-        error: 'Rate limit exceeded. Maximum 60 requests per minute.',
-        retry_after_seconds: rateCheck.resetIn
-      }));
+      return output.setContent(
+        JSON.stringify({
+          success: false,
+          error: 'Rate limit exceeded. Maximum 60 requests per minute.',
+          retry_after_seconds: rateCheck.resetIn,
+        }),
+      )
     }
 
     // Validate authentication (except for status endpoint)
     if (action !== 'status') {
-      const auth = validateApiAuth_(e, {});
+      const auth = validateApiAuth_(e, {})
       if (!auth.valid) {
-        return output.setContent(JSON.stringify({
-          success: false,
-          error: auth.error
-        }));
+        return output.setContent(
+          JSON.stringify({
+            success: false,
+            error: auth.error,
+          }),
+        )
       }
     }
 
-    Logger.log(`API GET: action=${action}, params=${JSON.stringify(params)}`);
+    Logger.log(`API GET: action=${action}, params=${JSON.stringify(params)}`)
 
-    let response = {};
+    let response = {}
 
     switch (action) {
       case 'status':
@@ -854,50 +885,63 @@ function doGet(e) {
           version: SYSTEM_VERSION,
           timestamp: getTimestamp_(),
           endpoints: {
-            POST: ['tc_in', 'tc_out', 'status_update', 'set_recording', 'mark_recorded', 'mark_approved', 'get_posts', 'get_current', 'get_next', 'get_post', 'get_schedule'],
-            GET: ['status', 'posts', 'schedule', 'post', 'current', 'clip_counter']
-          }
-        };
-        break;
+            POST: [
+              'tc_in',
+              'tc_out',
+              'status_update',
+              'set_recording',
+              'mark_recorded',
+              'mark_approved',
+              'get_posts',
+              'get_current',
+              'get_next',
+              'get_post',
+              'get_schedule',
+            ],
+            GET: ['status', 'posts', 'schedule', 'post', 'current', 'clip_counter'],
+          },
+        }
+        break
 
       case 'posts':
-        const programNr = parseInt(params.program) || 1;
-        response = handleGetPosts_({ program_nr: programNr });
-        break;
+        const programNr = parseInt(params.program) || 1
+        response = handleGetPosts_({ program_nr: programNr })
+        break
 
       case 'schedule':
-        const day = params.day || null;
-        response = handleGetSchedule_({ recording_day: day });
-        break;
+        const day = params.day || null
+        response = handleGetSchedule_({ recording_day: day })
+        break
 
       case 'post':
-        response = handleGetPost_({ post_id: params.post_id });
-        break;
+        response = handleGetPost_({ post_id: params.post_id })
+        break
 
       case 'current':
-        response = handleGetCurrent_({});
-        break;
+        response = handleGetCurrent_({})
+        break
 
       case 'clip_counter':
-        response = handleNextClip_({});
-        break;
+        response = handleNextClip_({})
+        break
 
       default:
         response = {
           success: false,
           error: `Unknown action: ${action}`,
-          available_actions: ['status', 'posts', 'schedule', 'post', 'current', 'clip_counter']
-        };
+          available_actions: ['status', 'posts', 'schedule', 'post', 'current', 'clip_counter'],
+        }
     }
 
-    return output.setContent(JSON.stringify(response));
-
+    return output.setContent(JSON.stringify(response))
   } catch (error) {
-    Logger.log(`API GET error: ${error.message}`);
-    return output.setContent(JSON.stringify({
-      success: false,
-      error: error.message
-    }));
+    Logger.log(`API GET error: ${error.message}`)
+    return output.setContent(
+      JSON.stringify({
+        success: false,
+        error: error.message,
+      }),
+    )
   }
 }
 
@@ -910,34 +954,34 @@ function doGet(e) {
  * Expected data: { post_id, tc_in, operator?, clip_nr? }
  */
 function handleTcIn_(data) {
-  const { post_id, tc_in, operator, clip_nr } = data;
+  const { post_id, tc_in, operator, clip_nr } = data
 
   if (!post_id) {
-    return { success: false, error: 'post_id required' };
+    return { success: false, error: 'post_id required' }
   }
 
   // Log to _DB_Logg
-  const logSheet = getDbSheet_(DB.LOG);
-  const clipNumber = clip_nr || getNextClipNumber_();
+  const logSheet = getDbSheet_(DB.LOG)
+  const clipNumber = clip_nr || getNextClipNumber_()
 
   logSheet.appendRow([
     getTimestamp_(),
     post_id,
     operator || 'API',
     tc_in || getTimestamp_(),
-    '',  // tc_out (filled later)
+    '', // tc_out (filled later)
     clipNumber,
-    '',  // duration (calculated on tc_out)
-    'TC-IN'
-  ]);
+    '', // duration (calculated on tc_out)
+    'TC-IN',
+  ])
 
   // Update post status to "recording"
   try {
-    updatePost(post_id, { status: POST_STATUS.RECORDING.key }, 'api');
+    updatePost(post_id, { status: POST_STATUS.RECORDING.key }, 'api')
     // Highlight current post in views
-    highlightCurrentPost_(post_id);
+    highlightCurrentPost_(post_id)
   } catch (e) {
-    Logger.log(`Warning: Could not update post status: ${e.message}`);
+    Logger.log(`Warning: Could not update post status: ${e.message}`)
   }
 
   // Audit log
@@ -947,8 +991,8 @@ function handleTcIn_(data) {
     entity_id: post_id,
     new_value: tc_in || 'auto',
     source: 'api',
-    user: operator || 'api'
-  });
+    user: operator || 'api',
+  })
 
   return {
     success: true,
@@ -956,8 +1000,8 @@ function handleTcIn_(data) {
     post_id: post_id,
     tc_in: tc_in,
     clip_nr: clipNumber,
-    status: POST_STATUS.RECORDING.key
-  };
+    status: POST_STATUS.RECORDING.key,
+  }
 }
 
 /**
@@ -965,43 +1009,43 @@ function handleTcIn_(data) {
  * Expected data: { post_id, tc_out, clip_nr? }
  */
 function handleTcOut_(data) {
-  const { post_id, tc_out, clip_nr } = data;
+  const { post_id, tc_out, clip_nr } = data
 
   if (!post_id) {
-    return { success: false, error: 'post_id required' };
+    return { success: false, error: 'post_id required' }
   }
 
   // Find matching TC-IN entry in log
-  const logSheet = getDbSheet_(DB.LOG);
-  const logData = logSheet.getDataRange().getValues();
+  const logSheet = getDbSheet_(DB.LOG)
+  const logData = logSheet.getDataRange().getValues()
 
   // Search from bottom (most recent first)
   for (let i = logData.length - 1; i >= 1; i--) {
-    const row = logData[i];
-    const logPostId = row[1];
-    const logClipNr = row[5];
-    const logTcOut = row[4];
+    const row = logData[i]
+    const logPostId = row[1]
+    const logClipNr = row[5]
+    const logTcOut = row[4]
 
     // Match by post_id and ensure tc_out is empty
     if (logPostId === post_id && !logTcOut) {
       // If clip_nr specified, must match
-      if (clip_nr && logClipNr !== clip_nr) continue;
+      if (clip_nr && logClipNr !== clip_nr) continue
 
-      const tcIn = row[3];
-      const duration = tc_out && tcIn ? calculateTcDuration_(tcIn, tc_out) : 0;
+      const tcIn = row[3]
+      const duration = tc_out && tcIn ? calculateTcDuration_(tcIn, tc_out) : 0
 
       // Update log row
-      logSheet.getRange(i + 1, 5).setValue(tc_out || getTimestamp_());
-      logSheet.getRange(i + 1, 7).setValue(duration);
-      logSheet.getRange(i + 1, 8).setValue('TC-OUT');
+      logSheet.getRange(i + 1, 5).setValue(tc_out || getTimestamp_())
+      logSheet.getRange(i + 1, 7).setValue(duration)
+      logSheet.getRange(i + 1, 8).setValue('TC-OUT')
 
       // Update post status to "recorded"
       try {
-        updatePost(post_id, { status: POST_STATUS.RECORDED.key }, 'api');
+        updatePost(post_id, { status: POST_STATUS.RECORDED.key }, 'api')
         // Clear current post highlighting since recording is done
-        clearAllCurrentHighlights_();
+        clearAllCurrentHighlights_()
       } catch (e) {
-        Logger.log(`Warning: Could not update post status: ${e.message}`);
+        Logger.log(`Warning: Could not update post status: ${e.message}`)
       }
 
       // Audit log
@@ -1012,8 +1056,8 @@ function handleTcOut_(data) {
         old_value: tcIn,
         new_value: tc_out || 'auto',
         field: `duration=${duration}s`,
-        source: 'api'
-      });
+        source: 'api',
+      })
 
       return {
         success: true,
@@ -1023,19 +1067,19 @@ function handleTcOut_(data) {
         tc_out: tc_out,
         duration_sec: duration,
         clip_nr: logClipNr,
-        status: POST_STATUS.RECORDED.key
-      };
+        status: POST_STATUS.RECORDED.key,
+      }
     }
   }
 
   // Warn about missing TC-IN (but still allow logging for manual recovery)
-  Logger.log(`Warning: No matching TC-IN found for ${post_id}`);
+  Logger.log(`Warning: No matching TC-IN found for ${post_id}`)
 
   return {
     success: false,
     error: `No matching TC-IN found for ${post_id}`,
-    hint: 'Send tc_in action first, or check if post_id is correct'
-  };
+    hint: 'Send tc_in action first, or check if post_id is correct',
+  }
 }
 
 // ============================================================================
@@ -1047,32 +1091,32 @@ function handleTcOut_(data) {
  * Expected data: { post_id, status }
  */
 function handleStatusUpdate_(data) {
-  const { post_id, status } = data;
+  const { post_id, status } = data
 
   if (!post_id) {
-    return { success: false, error: 'post_id required' };
+    return { success: false, error: 'post_id required' }
   }
 
   // Validate status
-  const validStatuses = Object.values(POST_STATUS).map(s => s.key);
+  const validStatuses = Object.values(POST_STATUS).map((s) => s.key)
   if (status && !validStatuses.includes(status)) {
     return {
       success: false,
       error: `Invalid status: ${status}`,
-      valid_statuses: validStatuses
-    };
+      valid_statuses: validStatuses,
+    }
   }
 
   try {
-    updatePost(post_id, { status: status || POST_STATUS.PLANNED.key }, 'api');
+    updatePost(post_id, { status: status || POST_STATUS.PLANNED.key }, 'api')
     return {
       success: true,
       message: `Status updated for ${post_id}`,
       post_id: post_id,
-      status: status
-    };
+      status: status,
+    }
   } catch (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: error.message }
   }
 }
 
@@ -1081,37 +1125,37 @@ function handleStatusUpdate_(data) {
  * Expected data: { post_id }
  */
 function handleSetRecording_(data) {
-  const { post_id } = data;
+  const { post_id } = data
 
   if (!post_id) {
-    return { success: false, error: 'post_id required' };
+    return { success: false, error: 'post_id required' }
   }
 
   try {
     // Clear any currently recording posts in the same program
-    const programMatch = post_id.match(/^P(\d):/);
+    const programMatch = post_id.match(/^P(\d):/)
     if (programMatch) {
-      const progNr = parseInt(programMatch[1]);
-      const posts = getAllPostsForProgram_(progNr);
+      const progNr = parseInt(programMatch[1])
+      const posts = getAllPostsForProgram_(progNr)
 
-      posts.forEach(post => {
+      posts.forEach((post) => {
         if (post[POST_SCHEMA.STATUS] === POST_STATUS.RECORDING.key) {
-          updatePost(post[POST_SCHEMA.ID], { status: POST_STATUS.PLANNED.key }, 'api');
+          updatePost(post[POST_SCHEMA.ID], { status: POST_STATUS.PLANNED.key }, 'api')
         }
-      });
+      })
     }
 
     // Set this post as recording
-    updatePost(post_id, { status: POST_STATUS.RECORDING.key }, 'api');
+    updatePost(post_id, { status: POST_STATUS.RECORDING.key }, 'api')
 
     return {
       success: true,
       message: `${post_id} set as recording`,
       post_id: post_id,
-      status: POST_STATUS.RECORDING.key
-    };
+      status: POST_STATUS.RECORDING.key,
+    }
   } catch (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: error.message }
   }
 }
 
@@ -1120,22 +1164,22 @@ function handleSetRecording_(data) {
  * Expected data: { post_id }
  */
 function handleMarkRecorded_(data) {
-  const { post_id } = data;
+  const { post_id } = data
 
   if (!post_id) {
-    return { success: false, error: 'post_id required' };
+    return { success: false, error: 'post_id required' }
   }
 
   try {
-    updatePost(post_id, { status: POST_STATUS.RECORDED.key }, 'api');
+    updatePost(post_id, { status: POST_STATUS.RECORDED.key }, 'api')
     return {
       success: true,
       message: `${post_id} marked as recorded`,
       post_id: post_id,
-      status: POST_STATUS.RECORDED.key
-    };
+      status: POST_STATUS.RECORDED.key,
+    }
   } catch (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: error.message }
   }
 }
 
@@ -1144,22 +1188,22 @@ function handleMarkRecorded_(data) {
  * Expected data: { post_id }
  */
 function handleMarkApproved_(data) {
-  const { post_id } = data;
+  const { post_id } = data
 
   if (!post_id) {
-    return { success: false, error: 'post_id required' };
+    return { success: false, error: 'post_id required' }
   }
 
   try {
-    updatePost(post_id, { status: POST_STATUS.APPROVED.key }, 'api');
+    updatePost(post_id, { status: POST_STATUS.APPROVED.key }, 'api')
     return {
       success: true,
       message: `${post_id} marked as approved`,
       post_id: post_id,
-      status: POST_STATUS.APPROVED.key
-    };
+      status: POST_STATUS.APPROVED.key,
+    }
   } catch (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: error.message }
   }
 }
 
@@ -1172,22 +1216,22 @@ function handleMarkApproved_(data) {
  * Expected data: { program_nr }
  */
 function handleGetPosts_(data) {
-  const programNr = data.program_nr || 1;
+  const programNr = data.program_nr || 1
 
   try {
-    const posts = getAllPostsForProgram_(programNr);
-    posts.sort((a, b) => a[POST_SCHEMA.SORT_ORDER] - b[POST_SCHEMA.SORT_ORDER]);
+    const posts = getAllPostsForProgram_(programNr)
+    posts.sort((a, b) => a[POST_SCHEMA.SORT_ORDER] - b[POST_SCHEMA.SORT_ORDER])
 
-    const formattedPosts = posts.map(post => formatPostForApi_(post));
+    const formattedPosts = posts.map((post) => formatPostForApi_(post))
 
     return {
       success: true,
       program_nr: programNr,
       count: formattedPosts.length,
-      posts: formattedPosts
-    };
+      posts: formattedPosts,
+    }
   } catch (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: error.message }
   }
 }
 
@@ -1196,28 +1240,28 @@ function handleGetPosts_(data) {
  * Expected data: { post_id }
  */
 function handleGetPost_(data) {
-  const { post_id } = data;
+  const { post_id } = data
 
   if (!post_id) {
-    return { success: false, error: 'post_id required' };
+    return { success: false, error: 'post_id required' }
   }
 
   try {
-    const sheet = getDbSheet_(DB.POSTS);
-    const allData = sheet.getDataRange().getValues();
+    const sheet = getDbSheet_(DB.POSTS)
+    const allData = sheet.getDataRange().getValues()
 
     for (let i = 1; i < allData.length; i++) {
       if (allData[i][POST_SCHEMA.ID] === post_id) {
         return {
           success: true,
-          post: formatPostForApi_(allData[i])
-        };
+          post: formatPostForApi_(allData[i]),
+        }
       }
     }
 
-    return { success: false, error: `Post ${post_id} not found` };
+    return { success: false, error: `Post ${post_id} not found` }
   } catch (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: error.message }
   }
 }
 
@@ -1226,16 +1270,16 @@ function handleGetPost_(data) {
  */
 function handleGetCurrent_(data) {
   try {
-    const sheet = getDbSheet_(DB.POSTS);
-    const allData = sheet.getDataRange().getValues();
+    const sheet = getDbSheet_(DB.POSTS)
+    const allData = sheet.getDataRange().getValues()
 
     for (let i = 1; i < allData.length; i++) {
       if (allData[i][POST_SCHEMA.STATUS] === POST_STATUS.RECORDING.key) {
         return {
           success: true,
           recording: true,
-          post: formatPostForApi_(allData[i])
-        };
+          post: formatPostForApi_(allData[i]),
+        }
       }
     }
 
@@ -1243,10 +1287,10 @@ function handleGetCurrent_(data) {
       success: true,
       recording: false,
       post: null,
-      message: 'No post currently recording'
-    };
+      message: 'No post currently recording',
+    }
   } catch (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: error.message }
   }
 }
 
@@ -1255,45 +1299,45 @@ function handleGetCurrent_(data) {
  * Expected data: { program_nr?, recording_day? }
  */
 function handleGetNext_(data) {
-  const { program_nr, recording_day } = data;
+  const { program_nr, recording_day } = data
 
   try {
-    const sheet = getDbSheet_(DB.POSTS);
-    const allData = sheet.getDataRange().getValues();
+    const sheet = getDbSheet_(DB.POSTS)
+    const allData = sheet.getDataRange().getValues()
 
     // Filter and sort posts
-    let candidates = allData.slice(1).filter(post => {
-      if (post[POST_SCHEMA.STATUS] !== POST_STATUS.PLANNED.key) return false;
-      if (program_nr && post[POST_SCHEMA.PROGRAM_NR] !== program_nr) return false;
-      if (recording_day && post[POST_SCHEMA.RECORDING_DAY] !== recording_day) return false;
-      return true;
-    });
+    let candidates = allData.slice(1).filter((post) => {
+      if (post[POST_SCHEMA.STATUS] !== POST_STATUS.PLANNED.key) return false
+      if (program_nr && post[POST_SCHEMA.PROGRAM_NR] !== program_nr) return false
+      if (recording_day && post[POST_SCHEMA.RECORDING_DAY] !== recording_day) return false
+      return true
+    })
 
     candidates.sort((a, b) => {
       // Sort by program, then sort_order
       if (a[POST_SCHEMA.PROGRAM_NR] !== b[POST_SCHEMA.PROGRAM_NR]) {
-        return a[POST_SCHEMA.PROGRAM_NR] - b[POST_SCHEMA.PROGRAM_NR];
+        return a[POST_SCHEMA.PROGRAM_NR] - b[POST_SCHEMA.PROGRAM_NR]
       }
-      return a[POST_SCHEMA.SORT_ORDER] - b[POST_SCHEMA.SORT_ORDER];
-    });
+      return a[POST_SCHEMA.SORT_ORDER] - b[POST_SCHEMA.SORT_ORDER]
+    })
 
     if (candidates.length > 0) {
       return {
         success: true,
         has_next: true,
         post: formatPostForApi_(candidates[0]),
-        remaining: candidates.length - 1
-      };
+        remaining: candidates.length - 1,
+      }
     }
 
     return {
       success: true,
       has_next: false,
       post: null,
-      message: 'No more posts to record'
-    };
+      message: 'No more posts to record',
+    }
   } catch (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: error.message }
   }
 }
 
@@ -1302,51 +1346,51 @@ function handleGetNext_(data) {
  * Expected data: { recording_day? }
  */
 function handleGetSchedule_(data) {
-  const { recording_day } = data;
+  const { recording_day } = data
 
   try {
-    const sheet = getDbSheet_(DB.POSTS);
-    const allData = sheet.getDataRange().getValues();
+    const sheet = getDbSheet_(DB.POSTS)
+    const allData = sheet.getDataRange().getValues()
 
-    let posts = allData.slice(1);
+    let posts = allData.slice(1)
 
     // Filter by recording day if specified
     if (recording_day) {
-      posts = posts.filter(p => p[POST_SCHEMA.RECORDING_DAY] === recording_day);
+      posts = posts.filter((p) => p[POST_SCHEMA.RECORDING_DAY] === recording_day)
     }
 
     // Sort by recording day, then program, then sort order
     posts.sort((a, b) => {
-      const dayOrder = { 'dag1': 1, 'dag2': 2, 'dag3': 3 };
-      const dayA = dayOrder[a[POST_SCHEMA.RECORDING_DAY]] || 99;
-      const dayB = dayOrder[b[POST_SCHEMA.RECORDING_DAY]] || 99;
+      const dayOrder = { day1: 1, day2: 2, day3: 3 }
+      const dayA = dayOrder[a[POST_SCHEMA.RECORDING_DAY]] || 99
+      const dayB = dayOrder[b[POST_SCHEMA.RECORDING_DAY]] || 99
 
-      if (dayA !== dayB) return dayA - dayB;
+      if (dayA !== dayB) return dayA - dayB
       if (a[POST_SCHEMA.PROGRAM_NR] !== b[POST_SCHEMA.PROGRAM_NR]) {
-        return a[POST_SCHEMA.PROGRAM_NR] - b[POST_SCHEMA.PROGRAM_NR];
+        return a[POST_SCHEMA.PROGRAM_NR] - b[POST_SCHEMA.PROGRAM_NR]
       }
-      return a[POST_SCHEMA.SORT_ORDER] - b[POST_SCHEMA.SORT_ORDER];
-    });
+      return a[POST_SCHEMA.SORT_ORDER] - b[POST_SCHEMA.SORT_ORDER]
+    })
 
-    const schedule = posts.map(post => formatPostForApi_(post));
+    const schedule = posts.map((post) => formatPostForApi_(post))
 
     // Calculate statistics (use database keys, not display names)
     const stats = {
       total: schedule.length,
-      planned: schedule.filter(p => p.status === POST_STATUS.PLANNED.key).length,
-      recording: schedule.filter(p => p.status === POST_STATUS.RECORDING.key).length,
-      recorded: schedule.filter(p => p.status === POST_STATUS.RECORDED.key).length,
-      approved: schedule.filter(p => p.status === POST_STATUS.APPROVED.key).length
-    };
+      planned: schedule.filter((p) => p.status === POST_STATUS.PLANNED.key).length,
+      recording: schedule.filter((p) => p.status === POST_STATUS.RECORDING.key).length,
+      recorded: schedule.filter((p) => p.status === POST_STATUS.RECORDED.key).length,
+      approved: schedule.filter((p) => p.status === POST_STATUS.APPROVED.key).length,
+    }
 
     return {
       success: true,
       recording_day: recording_day || 'all',
       stats: stats,
-      schedule: schedule
-    };
+      schedule: schedule,
+    }
   } catch (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: error.message }
   }
 }
 
@@ -1358,41 +1402,41 @@ function handleGetSchedule_(data) {
  * Get next clip number
  */
 function handleNextClip_(data) {
-  const nextClip = getNextClipNumber_();
+  const nextClip = getNextClipNumber_()
   return {
     success: true,
-    clip_nr: nextClip
-  };
+    clip_nr: nextClip,
+  }
 }
 
 /**
  * Increment and return clip number
  */
 function handleIncrementClip_(data) {
-  const nextClip = getNextClipNumber_();
+  const nextClip = getNextClipNumber_()
 
   // Store in settings for persistence
-  const settingsSheet = getDbSheet_(DB.SETTINGS);
-  const settingsData = settingsSheet.getDataRange().getValues();
+  const settingsSheet = getDbSheet_(DB.SETTINGS)
+  const settingsData = settingsSheet.getDataRange().getValues()
 
-  let found = false;
+  let found = false
   for (let i = 1; i < settingsData.length; i++) {
     if (settingsData[i][0] === 'clip_counter') {
-      settingsSheet.getRange(i + 1, 2).setValue(nextClip);
-      found = true;
-      break;
+      settingsSheet.getRange(i + 1, 2).setValue(nextClip)
+      found = true
+      break
     }
   }
 
   if (!found) {
-    settingsSheet.appendRow(['clip_counter', nextClip, 'Current clip counter']);
+    settingsSheet.appendRow(['clip_counter', nextClip, 'Current clip counter'])
   }
 
   return {
     success: true,
     clip_nr: nextClip,
-    message: `Clip counter incremented to ${nextClip}`
-  };
+    message: `Clip counter incremented to ${nextClip}`,
+  }
 }
 
 /**
@@ -1400,18 +1444,18 @@ function handleIncrementClip_(data) {
  */
 function getNextClipNumber_() {
   try {
-    const logSheet = getDbSheet_(DB.LOG);
-    const logData = logSheet.getDataRange().getValues();
+    const logSheet = getDbSheet_(DB.LOG)
+    const logData = logSheet.getDataRange().getValues()
 
-    let maxClip = 0;
+    let maxClip = 0
     for (let i = 1; i < logData.length; i++) {
-      const clipNr = parseInt(logData[i][5]) || 0;
-      if (clipNr > maxClip) maxClip = clipNr;
+      const clipNr = parseInt(logData[i][5]) || 0
+      if (clipNr > maxClip) maxClip = clipNr
     }
 
-    return maxClip + 1;
+    return maxClip + 1
   } catch (e) {
-    return 1;
+    return 1
   }
 }
 
@@ -1425,71 +1469,70 @@ function getNextClipNumber_() {
  * More efficient than multiple single updates
  */
 function handleBatchUpdate_(data) {
-  const { updates } = data;
+  const { updates } = data
 
   if (!updates || !Array.isArray(updates)) {
-    return { success: false, error: 'updates array required' };
+    return { success: false, error: 'updates array required' }
   }
 
   if (updates.length > 50) {
-    return { success: false, error: 'Maximum 50 updates per batch' };
+    return { success: false, error: 'Maximum 50 updates per batch' }
   }
 
-  const results = [];
-  let successCount = 0;
-  let errorCount = 0;
+  const results = []
+  let successCount = 0
+  let errorCount = 0
 
   // Get all posts data once (more efficient than individual lookups)
-  const sheet = getDbSheet_(DB.POSTS);
-  const allData = sheet.getDataRange().getValues();
+  const sheet = getDbSheet_(DB.POSTS)
+  const allData = sheet.getDataRange().getValues()
 
   // Create lookup map for faster access
-  const postRowMap = new Map();
+  const postRowMap = new Map()
   for (let i = 1; i < allData.length; i++) {
     postRowMap.set(allData[i][POST_SCHEMA.ID], {
       rowIndex: i + 1,
-      data: allData[i]
-    });
+      data: allData[i],
+    })
   }
 
   // Process each update
   updates.forEach((update, index) => {
-    const { post_id } = update;
+    const { post_id } = update
 
     if (!post_id) {
-      results.push({ index, post_id: null, success: false, error: 'post_id required' });
-      errorCount++;
-      return;
+      results.push({ index, post_id: null, success: false, error: 'post_id required' })
+      errorCount++
+      return
     }
 
-    const postInfo = postRowMap.get(post_id);
+    const postInfo = postRowMap.get(post_id)
 
     if (!postInfo) {
-      results.push({ index, post_id, success: false, error: 'Post not found' });
-      errorCount++;
-      return;
+      results.push({ index, post_id, success: false, error: 'Post not found' })
+      errorCount++
+      return
     }
 
     try {
       // Build update object (excluding post_id and internal fields)
-      const updateFields = {};
-      Object.keys(update).forEach(key => {
+      const updateFields = {}
+      Object.keys(update).forEach((key) => {
         if (key !== 'post_id' && !key.startsWith('_')) {
-          updateFields[key] = update[key];
+          updateFields[key] = update[key]
         }
-      });
+      })
 
       // Use existing updatePost function
-      updatePost(post_id, updateFields, 'api_batch');
+      updatePost(post_id, updateFields, 'api_batch')
 
-      results.push({ index, post_id, success: true });
-      successCount++;
-
+      results.push({ index, post_id, success: true })
+      successCount++
     } catch (error) {
-      results.push({ index, post_id, success: false, error: error.message });
-      errorCount++;
+      results.push({ index, post_id, success: false, error: error.message })
+      errorCount++
     }
-  });
+  })
 
   return {
     success: errorCount === 0,
@@ -1497,8 +1540,8 @@ function handleBatchUpdate_(data) {
     total: updates.length,
     success_count: successCount,
     error_count: errorCount,
-    results: results
-  };
+    results: results,
+  }
 }
 
 /**
@@ -1506,46 +1549,46 @@ function handleBatchUpdate_(data) {
  * Expected data: { post_ids: ["P1:1", "P1:2", ...] }
  */
 function handleBatchGet_(data) {
-  const { post_ids } = data;
+  const { post_ids } = data
 
   if (!post_ids || !Array.isArray(post_ids)) {
-    return { success: false, error: 'post_ids array required' };
+    return { success: false, error: 'post_ids array required' }
   }
 
   if (post_ids.length > 100) {
-    return { success: false, error: 'Maximum 100 posts per batch' };
+    return { success: false, error: 'Maximum 100 posts per batch' }
   }
 
   // Get all posts data once
-  const sheet = getDbSheet_(DB.POSTS);
-  const allData = sheet.getDataRange().getValues();
+  const sheet = getDbSheet_(DB.POSTS)
+  const allData = sheet.getDataRange().getValues()
 
   // Create lookup map
-  const postMap = new Map();
+  const postMap = new Map()
   for (let i = 1; i < allData.length; i++) {
-    postMap.set(allData[i][POST_SCHEMA.ID], allData[i]);
+    postMap.set(allData[i][POST_SCHEMA.ID], allData[i])
   }
 
   // Fetch requested posts
-  const posts = [];
-  const notFound = [];
+  const posts = []
+  const notFound = []
 
-  post_ids.forEach(postId => {
-    const post = postMap.get(postId);
+  post_ids.forEach((postId) => {
+    const post = postMap.get(postId)
     if (post) {
-      posts.push(formatPostForApi_(post));
+      posts.push(formatPostForApi_(post))
     } else {
-      notFound.push(postId);
+      notFound.push(postId)
     }
-  });
+  })
 
   return {
     success: true,
     found: posts.length,
     not_found: notFound.length,
     posts: posts,
-    missing: notFound
-  };
+    missing: notFound,
+  }
 }
 
 // ============================================================================
@@ -1569,8 +1612,8 @@ function formatPostForApi_(postRow) {
     recording_day: postRow[POST_SCHEMA.RECORDING_DAY],
     recording_time: postRow[POST_SCHEMA.RECORDING_TIME],
     status: postRow[POST_SCHEMA.STATUS],
-    notes: postRow[POST_SCHEMA.NOTES]
-  };
+    notes: postRow[POST_SCHEMA.NOTES],
+  }
 }
 
 /**
@@ -1579,21 +1622,23 @@ function formatPostForApi_(postRow) {
  */
 function calculateTcDuration_(tcIn, tcOut) {
   const parseTC = (tc) => {
-    if (!tc) return 0;
-    const parts = String(tc).split(':').map(p => parseInt(p, 10) || 0);
+    if (!tc) return 0
+    const parts = String(tc)
+      .split(':')
+      .map((p) => parseInt(p, 10) || 0)
     if (parts.length >= 3) {
-      return parts[0] * 3600 + parts[1] * 60 + parts[2];
+      return parts[0] * 3600 + parts[1] * 60 + parts[2]
     }
-    return 0;
-  };
+    return 0
+  }
 
-  const duration = parseTC(tcOut) - parseTC(tcIn);
+  const duration = parseTC(tcOut) - parseTC(tcIn)
 
   // Return 0 if negative (tcOut before tcIn is invalid)
   if (duration < 0) {
-    Logger.log(`Warning: Negative duration calculated (tcIn=${tcIn}, tcOut=${tcOut})`);
-    return 0;
+    Logger.log(`Warning: Negative duration calculated (tcIn=${tcIn}, tcOut=${tcOut})`)
+    return 0
   }
 
-  return duration;
+  return duration
 }

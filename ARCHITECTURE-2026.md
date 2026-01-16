@@ -189,12 +189,12 @@ vercel
 
 ## Costs
 
-| Service | Cost | Included |
-|---------|------|----------|
-| Supabase Free | £0/month | 500 MB database, 2 GB bandwidth, unlimited API |
-| Cloudflare Workers Free | £0/month | 100k requests/day |
-| Vercel Free | £0/month | 100 GB bandwidth, unlimited deploys |
-| Google Sheets | £0/month | Included in Workspace |
+| Service                 | Cost     | Included                                       |
+| ----------------------- | -------- | ---------------------------------------------- |
+| Supabase Free           | £0/month | 500 MB database, 2 GB bandwidth, unlimited API |
+| Cloudflare Workers Free | £0/month | 100k requests/day                              |
+| Vercel Free             | £0/month | 100 GB bandwidth, unlimited deploys            |
+| Google Sheets           | £0/month | Included in Workspace                          |
 
 **Total: £0/month**
 
