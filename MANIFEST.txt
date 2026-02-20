@@ -22,7 +22,7 @@ DOCUMENTATION:
 
 SUPPORT FILES:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  LICENSE         ( 1 KB)  - MIT License
+  LICENSE         ( 1 KB)  - MIT Licence
   .gitignore      (<1 KB)  - Git ignore rules
   MANIFEST.txt    (this file)
 
